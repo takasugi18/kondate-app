@@ -103,6 +103,51 @@
     padding: 16px;
   }
 
+  .preset-panel {
+    background: #ffffff;
+    border: 2px solid var(--primary);
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin-bottom: 14px;
+  }
+  .preset-top {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+  .preset-title {
+    font-weight: 700;
+    color: var(--primary-dark);
+    font-size: 14px;
+  }
+  .genre-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .genre-pill {
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    border: 1px solid var(--border);
+    background: #f4f7f6;
+    color: var(--text);
+  }
+  .genre-pill.active {
+    background: var(--primary);
+    color: #fff;
+    border-color: var(--primary);
+  }
+  .preset-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+  }
+
   .control-bar {
     background: var(--card);
     border: 1px solid var(--border);
@@ -302,7 +347,7 @@
   .hidden { display: none !important; }
 
   @media print {
-    header .header-actions, .add-bar, .tabs, .no-print { display: none !important; }
+    header .header-actions, .add-bar, .tabs, .no-print, .preset-panel { display: none !important; }
     body { background: #fff; font-size: 12px; }
     .container { max-width: 100%; padding: 0; }
     .card { border: 1px solid #999; box-shadow: none; break-inside: avoid; }
@@ -315,18 +360,34 @@
 <header>
   <div>
     <h1>小学校給食 献立作成・栄養価＆原価計算システム</h1>
-    <p>文部科学省 学校給食摂取基準・日本食品標準成分表（八訂）増補2023年 準拠</p>
+    <p>文部科学省 学校給食摂取基準・日本食品標準成分表（八訂）増補2023年 準拠（全60献立ライブラリ搭載）</p>
   </div>
   <div class="header-actions">
-    <button onclick="loadPreset('curry')">サンプル1: ポークカレー献立</button>
-    <button onclick="loadPreset('washoku')">サンプル2: 和食焼き魚献立</button>
-    <button onclick="loadPreset('iron')">サンプル3: 鉄・カルシウム強化献立</button>
     <button onclick="exportCSV()">Excel用CSV出力</button>
     <button onclick="window.print()">印刷 / PDF保存</button>
   </div>
 </header>
 
 <div class="container">
+  <!-- サンプル献立ライブラリ（60種類） -->
+  <div class="preset-panel no-print">
+    <div class="preset-top">
+      <div class="preset-title">サンプル献立ライブラリ（和洋中・全60種類からワンクリック読込）</div>
+      <div class="genre-pills" id="genrePills">
+        <button class="genre-pill active" onclick="setGenreFilter('ALL', this)">すべて (60)</button>
+        <button class="genre-pill" onclick="setGenreFilter('和食', this)">和食 (22)</button>
+        <button class="genre-pill" onclick="setGenreFilter('洋食', this)">洋食 (20)</button>
+        <button class="genre-pill" onclick="setGenreFilter('中華・エスニック', this)">中華・エスニック (18)</button>
+      </div>
+    </div>
+    <div class="preset-controls">
+      <input type="text" id="presetSearch" placeholder="キーワード検索（例：カレー、魚、丼、麺、パン）" style="width:260px;" oninput="renderPresetSelect()">
+      <select id="presetSelect" style="flex:1; min-width:280px;" onchange="loadSelectedPreset()"></select>
+      <button class="btn-primary" onclick="loadSelectedPreset()">この献立を読み込む</button>
+      <button class="btn-accent" onclick="loadRandomPreset()">ランダム提案</button>
+    </div>
+  </div>
+
   <!-- 基本設定バー -->
   <div class="control-bar">
     <div class="control-group">
@@ -336,7 +397,7 @@
       </div>
       <div class="field">
         <label>献立タイトル</label>
-        <input type="text" id="menuTitle" value="麦ごはん・ポークカレー・海藻サラダ・牛乳" style="width: 260px;" onchange="saveState()">
+        <input type="text" id="menuTitle" value="麦ごはん・ポークカレー・海藻サラダ・牛乳" style="width: 280px;" onchange="saveState()">
       </div>
       <div class="field">
         <label>基準学年区分（文科省摂取基準）</label>
@@ -363,12 +424,11 @@
   <div class="tabs no-print">
     <button class="tab-btn active" id="tabBtnPlanner" onclick="switchTab('planner')">1. 献立作成・栄養＆原価計算</button>
     <button class="tab-btn" id="tabBtnOrder" onclick="switchTab('order')">2. 全校発注集計表（kg・金額）</button>
-    <button class="tab-btn" id="tabBtnMaster" onclick="switchTab('master')">3. 食材マスタ編集・新規登録</button>
+    <button class="tab-btn" id="tabBtnMaster" onclick="switchTab('master')">3. 食材マスタ編集・新規登録（100品目）</button>
   </div>
 
   <!-- タブ1：献立作成メイン -->
   <div id="tabPlanner">
-    <!-- サマリーKPI -->
     <div class="kpi-grid">
       <div class="kpi-box">
         <div class="kpi-label">1人あたり材料原価（税込目安）</div>
@@ -393,7 +453,6 @@
     </div>
 
     <div class="grid-main">
-      <!-- 左側：献立明細テーブル -->
       <div>
         <div class="card">
           <div class="card-title">
@@ -401,7 +460,6 @@
             <button class="btn-danger no-print" onclick="clearMenu()">献立をクリア</button>
           </div>
 
-          <!-- 食材追加フォーム -->
           <div class="add-bar no-print">
             <div class="field">
               <label>料理区分</label>
@@ -421,6 +479,7 @@
                 <option value="いも類">いも類</option>
                 <option value="豆・種実">豆・種実</option>
                 <option value="野菜・きのこ・海藻">野菜・きのこ・海藻</option>
+                <option value="果実類">果実類</option>
                 <option value="魚介類">魚介類</option>
                 <option value="肉類">肉類</option>
                 <option value="卵・乳類">卵・乳類</option>
@@ -459,7 +518,6 @@
         </div>
       </div>
 
-      <!-- 右側：栄養価充足度＆PFCバランス -->
       <div>
         <div class="card">
           <div class="card-title">
@@ -556,6 +614,7 @@
             <option value="いも類">いも類</option>
             <option value="豆・種実">豆・種実</option>
             <option value="野菜・きのこ・海藻">野菜・きのこ・海藻</option>
+            <option value="果実類">果実類</option>
             <option value="魚介類">魚介類</option>
             <option value="肉類">肉類</option>
             <option value="卵・乳類">卵・乳類</option>
@@ -641,14 +700,13 @@
 </div>
 
 <script>
-// 文部科学省 学校給食摂取基準（現行基準）
 const STANDARDS = {
   low:  { label: '小学校 低学年（6〜7歳）', energy: 530, pMin: 13, pMax: 20, fMin: 20, fMax: 30, cMin: 50, cMax: 67, saltMax: 1.5, ca: 290, fe: 2.0, fiber: 4.5 },
   mid:  { label: '小学校 中学年（8〜9歳）', energy: 650, pMin: 13, pMax: 20, fMin: 20, fMax: 30, cMin: 50, cMax: 67, saltMax: 2.0, ca: 350, fe: 3.0, fiber: 5.0 },
   high: { label: '小学校 高学年（10〜11歳）', energy: 780, pMin: 13, pMax: 20, fMin: 20, fMax: 30, cMin: 50, cMax: 67, saltMax: 2.0, ca: 450, fe: 4.0, fiber: 6.0 }
 };
 
-// 日本食品標準成分表（八訂）増補2023年 準拠 初期食材マスタ（100gあたり）
+// 日本食品標準成分表（八訂）増補2023年 準拠 食材マスタ（100品目）
 const DEFAULT_FOODS = [
   { id: 'f01', cat: '穀類', name: '精白米（水稲めし換算前・乾）', energy: 342, protein: 6.1, fat: 0.9, carb: 77.6, salt: 0.0, ca: 5, fe: 0.8, fiber: 0.5, waste: 0, price: 42 },
   { id: 'f02', cat: '穀類', name: '押し麦（大麦・乾）', energy: 332, protein: 6.2, fat: 1.3, carb: 77.8, salt: 0.0, ca: 17, fe: 1.1, fiber: 9.6, waste: 0, price: 38 },
@@ -656,14 +714,26 @@ const DEFAULT_FOODS = [
   { id: 'f04', cat: '穀類', name: 'ソフトめん（ゆでスパゲッティ）', energy: 150, protein: 5.4, fat: 0.9, carb: 30.8, salt: 0.3, ca: 11, fe: 0.5, fiber: 1.5, waste: 0, price: 35 },
   { id: 'f05', cat: '穀類', name: '中華めん（ゆで）', energy: 133, protein: 4.5, fat: 0.6, carb: 27.9, salt: 0.3, ca: 8, fe: 0.4, fiber: 1.3, waste: 0, price: 36 },
   { id: 'f06', cat: '穀類', name: '薄力粉（小麦粉）', energy: 349, protein: 8.3, fat: 1.5, carb: 75.8, salt: 0.0, ca: 17, fe: 0.6, fiber: 2.5, waste: 0, price: 28 },
+  { id: 'f58', cat: '穀類', name: 'もち米（精白米・乾）', energy: 343, protein: 6.1, fat: 0.8, carb: 77.6, salt: 0.0, ca: 4, fe: 0.6, fiber: 0.6, waste: 0, price: 52 },
+  { id: 'f59', cat: '穀類', name: 'マカロニ・ペンネ（乾）', energy: 356, protein: 12.9, fat: 1.8, carb: 72.8, salt: 0.0, ca: 21, fe: 1.4, fiber: 2.7, waste: 0, price: 48 },
+  { id: 'f92', cat: '穀類', name: 'パン粉（乾燥）', energy: 344, protein: 12.6, fat: 5.6, carb: 64.5, salt: 1.3, ca: 34, fe: 0.9, fiber: 3.6, waste: 0, price: 58 },
+
   { id: 'f07', cat: 'いも類', name: 'じゃがいも（塊茎・生）', energy: 59, protein: 1.8, fat: 0.1, carb: 17.3, salt: 0.0, ca: 4, fe: 0.4, fiber: 1.3, waste: 10, price: 26 },
   { id: 'f08', cat: 'いも類', name: 'さつまいも（塊根・生）', energy: 126, protein: 1.2, fat: 0.2, carb: 31.9, salt: 0.0, ca: 36, fe: 0.6, fiber: 2.2, waste: 10, price: 35 },
   { id: 'f09', cat: 'いも類', name: 'さといも（球茎・生）', energy: 53, protein: 1.5, fat: 0.1, carb: 13.1, salt: 0.0, ca: 16, fe: 0.5, fiber: 2.3, waste: 15, price: 45 },
   { id: 'f10', cat: 'いも類', name: 'じゃがいもでんぷん（片栗粉）', energy: 332, protein: 0.1, fat: 0.1, carb: 82.8, salt: 0.0, ca: 16, fe: 0.2, fiber: 0.0, waste: 0, price: 32 },
+  { id: 'f60', cat: 'いも類', name: '緑豆はるさめ（乾）', energy: 342, protein: 0.2, fat: 0.1, carb: 84.6, salt: 0.0, ca: 24, fe: 0.8, fiber: 1.6, waste: 0, price: 78 },
+  { id: 'f61', cat: 'いも類', name: 'こんにゃく（板こんにゃく）', energy: 5, protein: 0.1, fat: 0.0, carb: 2.3, salt: 0.0, ca: 43, fe: 0.4, fiber: 2.2, waste: 0, price: 24 },
+
   { id: 'f11', cat: '豆・種実', name: '木綿豆腐', energy: 73, protein: 7.0, fat: 4.9, carb: 1.5, salt: 0.0, ca: 93, fe: 1.5, fiber: 1.1, waste: 0, price: 25 },
   { id: 'f12', cat: '豆・種実', name: '油揚げ', energy: 377, protein: 23.4, fat: 34.4, carb: 0.4, salt: 0.0, ca: 310, fe: 4.2, fiber: 1.1, waste: 0, price: 85 },
   { id: 'f13', cat: '豆・種実', name: '納豆（糸引き）', energy: 184, protein: 16.5, fat: 10.0, carb: 12.1, salt: 0.0, ca: 90, fe: 3.3, fiber: 6.7, waste: 0, price: 75 },
   { id: 'f14', cat: '豆・種実', name: 'いりごま（白・黒）', energy: 605, protein: 20.3, fat: 54.2, carb: 18.5, salt: 0.0, ca: 1200, fe: 9.9, fiber: 12.6, waste: 0, price: 110 },
+  { id: 'f63', cat: '豆・種実', name: '大豆（ゆで・水煮）', energy: 163, protein: 14.8, fat: 9.0, carb: 9.6, salt: 0.0, ca: 70, fe: 2.0, fiber: 6.8, waste: 0, price: 48 },
+  { id: 'f64', cat: '豆・種実', name: '凍りどうふ（高野豆腐・乾）', energy: 536, protein: 50.5, fat: 34.1, carb: 4.2, salt: 0.0, ca: 630, fe: 5.8, fiber: 2.6, waste: 0, price: 165 },
+  { id: 'f65', cat: '豆・種実', name: '厚揚げ（生揚げ）', energy: 143, protein: 10.7, fat: 11.3, carb: 0.9, salt: 0.0, ca: 240, fe: 2.6, fiber: 0.9, waste: 0, price: 42 },
+  { id: 'f100', cat: '豆・種実', name: 'きなこ（黄な粉）', energy: 450, protein: 36.7, fat: 25.7, carb: 28.5, salt: 0.0, ca: 190, fe: 8.0, fiber: 18.1, waste: 0, price: 85 },
+
   { id: 'f15', cat: '野菜・きのこ・海藻', name: 'たまねぎ（鱗茎・生）', energy: 33, protein: 1.0, fat: 0.1, carb: 8.4, salt: 0.0, ca: 17, fe: 0.2, fiber: 1.5, waste: 6, price: 22 },
   { id: 'f16', cat: '野菜・きのこ・海藻', name: 'にんじん（根・皮むき生）', energy: 35, protein: 0.7, fat: 0.2, carb: 9.3, salt: 0.0, ca: 28, fe: 0.2, fiber: 2.8, waste: 3, price: 28 },
   { id: 'f17', cat: '野菜・きのこ・海藻', name: 'キャベツ（結球葉・生）', energy: 21, protein: 1.3, fat: 0.2, carb: 5.2, salt: 0.0, ca: 43, fe: 0.3, fiber: 1.8, waste: 15, price: 20 },
@@ -679,22 +749,55 @@ const DEFAULT_FOODS = [
   { id: 'f27', cat: '野菜・きのこ・海藻', name: 'ぶなしめじ（生）', energy: 22, protein: 2.7, fat: 0.5, carb: 4.8, salt: 0.0, ca: 2, fe: 0.4, fiber: 3.0, waste: 10, price: 62 },
   { id: 'f28', cat: '野菜・きのこ・海藻', name: 'カットわかめ（乾燥・水戻し前）', energy: 138, protein: 18.0, fat: 4.0, carb: 41.8, salt: 24.0, ca: 820, fe: 6.1, fiber: 35.6, waste: 0, price: 280 },
   { id: 'f29', cat: '野菜・きのこ・海藻', name: 'ひじき（干し・鉄釜）', energy: 149, protein: 9.2, fat: 3.2, carb: 58.4, salt: 4.7, ca: 1000, fe: 58.2, fiber: 51.8, waste: 0, price: 320 },
+  { id: 'f62', cat: '野菜・きのこ・海藻', name: '切り干しだいこん（乾）', energy: 279, protein: 9.7, fat: 0.8, carb: 69.7, salt: 0.7, ca: 500, fe: 3.1, fiber: 21.3, waste: 0, price: 145 },
+  { id: 'f66', cat: '野菜・きのこ・海藻', name: 'ピーマン（果実・生）', energy: 20, protein: 0.9, fat: 0.2, carb: 5.1, salt: 0.0, ca: 11, fe: 0.4, fiber: 2.3, waste: 15, price: 55 },
+  { id: 'f67', cat: '野菜・きのこ・海藻', name: 'にら（葉・生）', energy: 18, protein: 1.7, fat: 0.3, carb: 4.0, salt: 0.0, ca: 48, fe: 0.7, fiber: 2.7, waste: 5, price: 68 },
+  { id: 'f68', cat: '野菜・きのこ・海藻', name: '葉ねぎ・長ねぎ（生）', energy: 28, protein: 1.1, fat: 0.1, carb: 7.2, salt: 0.0, ca: 31, fe: 0.5, fiber: 2.2, waste: 15, price: 48 },
+  { id: 'f69', cat: '野菜・きのこ・海藻', name: 'かぼちゃ（西洋・生）', energy: 78, protein: 1.9, fat: 0.3, carb: 20.6, salt: 0.0, ca: 15, fe: 0.5, fiber: 3.5, waste: 10, price: 38 },
+  { id: 'f70', cat: '野菜・きのこ・海藻', name: 'なす（果実・生）', energy: 18, protein: 1.1, fat: 0.1, carb: 5.1, salt: 0.0, ca: 18, fe: 0.3, fiber: 2.2, waste: 10, price: 46 },
+  { id: 'f71', cat: '野菜・きのこ・海藻', name: 'れんこん（根茎・生）', energy: 66, protein: 1.9, fat: 0.1, carb: 15.5, salt: 0.0, ca: 19, fe: 0.5, fiber: 2.0, waste: 20, price: 64 },
+  { id: 'f72', cat: '野菜・きのこ・海藻', name: 'たけのこ（水煮）', energy: 27, protein: 3.5, fat: 0.2, carb: 4.6, salt: 0.0, ca: 12, fe: 0.5, fiber: 3.3, waste: 0, price: 78 },
+  { id: 'f73', cat: '野菜・きのこ・海藻', name: '水菜（きょうな・生）', energy: 20, protein: 2.2, fat: 0.1, carb: 4.8, salt: 0.0, ca: 210, fe: 2.1, fiber: 3.0, waste: 5, price: 54 },
+  { id: 'f74', cat: '野菜・きのこ・海藻', name: 'なめこ（生）', energy: 14, protein: 1.7, fat: 0.2, carb: 5.4, salt: 0.0, ca: 4, fe: 0.5, fiber: 3.3, waste: 5, price: 68 },
+  { id: 'f75', cat: '野菜・きのこ・海藻', name: '干ししいたけ（乾）', energy: 182, protein: 19.3, fat: 3.7, carb: 63.4, salt: 0.0, ca: 11, fe: 2.0, fiber: 41.0, waste: 0, price: 380 },
+  { id: 'f93', cat: '野菜・きのこ・海藻', name: 'トマト水煮缶（カットトマト）', energy: 20, protein: 1.0, fat: 0.1, carb: 4.4, salt: 0.1, ca: 14, fe: 0.5, fiber: 1.3, waste: 0, price: 32 },
+
+  { id: 'f76', cat: '果実類', name: 'りんご（皮なし・生）', energy: 53, protein: 0.1, fat: 0.2, carb: 14.3, salt: 0.0, ca: 4, fe: 0.1, fiber: 1.4, waste: 15, price: 48 },
+  { id: 'f77', cat: '果実類', name: 'うんしゅうみかん（果肉・缶詰含む）', energy: 49, protein: 0.7, fat: 0.1, carb: 12.0, salt: 0.0, ca: 21, fe: 0.2, fiber: 1.0, waste: 20, price: 52 },
+  { id: 'f78', cat: '果実類', name: 'バナナ（生）', energy: 93, protein: 1.1, fat: 0.2, carb: 22.5, salt: 0.0, ca: 6, fe: 0.3, fiber: 1.1, waste: 40, price: 34 },
+
   { id: 'f30', cat: '魚介類', name: 'しろさけ（切り身・生）', energy: 124, protein: 22.3, fat: 4.1, carb: 0.1, salt: 0.1, ca: 10, fe: 0.5, fiber: 0.0, waste: 0, price: 145 },
   { id: 'f31', cat: '魚介類', name: 'まさば（切り身・生）', energy: 211, protein: 20.6, fat: 16.8, carb: 0.3, salt: 0.2, ca: 6, fe: 1.2, fiber: 0.0, waste: 0, price: 115 },
   { id: 'f32', cat: '魚介類', name: 'あじ（切り身・生）', energy: 112, protein: 19.7, fat: 4.5, carb: 0.1, salt: 0.2, ca: 65, fe: 0.7, fiber: 0.0, waste: 0, price: 125 },
   { id: 'f33', cat: '魚介類', name: 'しらす干し（微乾燥）', energy: 113, protein: 23.1, fat: 1.8, carb: 0.3, salt: 4.1, ca: 210, fe: 0.8, fiber: 0.0, waste: 0, price: 210 },
   { id: 'f34', cat: '魚介類', name: 'ツナ缶（まぐろ油漬け・フレーク）', energy: 267, protein: 17.7, fat: 21.7, carb: 0.1, salt: 0.8, ca: 7, fe: 0.5, fiber: 0.0, waste: 0, price: 128 },
   { id: 'f35', cat: '魚介類', name: 'ちくわ（焼きちくわ）', energy: 119, protein: 12.2, fat: 2.0, carb: 13.5, salt: 2.1, ca: 35, fe: 0.4, fiber: 0.0, waste: 0, price: 68 },
+  { id: 'f79', cat: '魚介類', name: 'たら（まだら・切り身・生）', energy: 72, protein: 17.6, fat: 0.2, carb: 0.1, salt: 0.3, ca: 18, fe: 0.3, fiber: 0.0, waste: 0, price: 128 },
+  { id: 'f80', cat: '魚介類', name: 'ぶり（成魚・切り身・生）', energy: 222, protein: 21.4, fat: 17.6, carb: 0.3, salt: 0.1, ca: 5, fe: 1.3, fiber: 0.0, waste: 0, price: 155 },
+  { id: 'f81', cat: '魚介類', name: 'ほっけ（開き干し・生換算）', energy: 115, protein: 17.3, fat: 4.4, carb: 0.1, salt: 1.3, ca: 68, fe: 0.9, fiber: 0.0, waste: 15, price: 118 },
+  { id: 'f82', cat: '魚介類', name: 'さわら（切り身・生）', energy: 162, protein: 20.1, fat: 9.7, carb: 0.1, salt: 0.2, ca: 18, fe: 0.7, fiber: 0.0, waste: 0, price: 148 },
+  { id: 'f83', cat: '魚介類', name: 'ししゃも（からふとししゃも・生）', energy: 154, protein: 17.5, fat: 9.6, carb: 0.2, salt: 1.5, ca: 330, fe: 1.5, fiber: 0.0, waste: 0, price: 110 },
+  { id: 'f84', cat: '魚介類', name: 'むきえび（冷凍・生）', energy: 82, protein: 18.4, fat: 0.3, carb: 0.1, salt: 0.4, ca: 42, fe: 0.3, fiber: 0.0, waste: 0, price: 185 },
+  { id: 'f85', cat: '魚介類', name: 'いか（するめいか・生）', energy: 76, protein: 17.9, fat: 0.8, carb: 0.1, salt: 0.5, ca: 15, fe: 0.2, fiber: 0.0, waste: 10, price: 135 },
+  { id: 'f86', cat: '魚介類', name: 'あさり（水煮缶）', energy: 77, protein: 13.7, fat: 1.4, carb: 1.3, salt: 1.3, ca: 130, fe: 29.7, fiber: 0.0, waste: 0, price: 168 },
+
   { id: 'f36', cat: '肉類', name: '豚肉（もも・赤肉・生）', energy: 128, protein: 22.1, fat: 4.3, carb: 0.2, salt: 0.1, ca: 4, fe: 0.9, fiber: 0.0, waste: 0, price: 118 },
   { id: 'f37', cat: '肉類', name: '豚肉（こま切れ・肩ロース混）', energy: 216, protein: 18.5, fat: 15.1, carb: 0.1, salt: 0.1, ca: 4, fe: 0.8, fiber: 0.0, waste: 0, price: 112 },
   { id: 'f38', cat: '肉類', name: '鶏肉（むね・皮なし・生）', energy: 105, protein: 23.3, fat: 1.9, carb: 0.1, salt: 0.1, ca: 4, fe: 0.3, fiber: 0.0, waste: 0, price: 82 },
   { id: 'f39', cat: '肉類', name: '鶏肉（もも・皮つき・生）', energy: 190, protein: 16.6, fat: 14.2, carb: 0.0, salt: 0.1, ca: 6, fe: 0.6, fiber: 0.0, waste: 0, price: 98 },
   { id: 'f40', cat: '肉類', name: '豚ひき肉（生）', energy: 236, protein: 17.7, fat: 17.2, carb: 0.1, salt: 0.1, ca: 5, fe: 0.9, fiber: 0.0, waste: 0, price: 96 },
   { id: 'f41', cat: '肉類', name: '豚レバー（生）', energy: 114, protein: 20.4, fat: 3.4, carb: 2.5, salt: 0.2, ca: 5, fe: 13.0, fiber: 0.0, waste: 0, price: 88 },
+  { id: 'f87', cat: '肉類', name: '牛肉（もも・切り落とし・生）', energy: 165, protein: 21.3, fat: 9.6, carb: 0.5, salt: 0.1, ca: 4, fe: 2.7, fiber: 0.0, waste: 0, price: 195 },
+  { id: 'f88', cat: '肉類', name: '鶏ひき肉（生）', energy: 177, protein: 17.5, fat: 11.4, carb: 0.0, salt: 0.1, ca: 8, fe: 0.8, fiber: 0.0, waste: 0, price: 84 },
+  { id: 'f89', cat: '肉類', name: 'ベーコン（ロース）', energy: 405, protein: 12.9, fat: 39.1, carb: 0.3, salt: 2.0, ca: 6, fe: 0.4, fiber: 0.0, waste: 0, price: 145 },
+  { id: 'f90', cat: '肉類', name: 'ウインナーソーセージ', energy: 312, protein: 11.5, fat: 28.5, carb: 3.0, salt: 1.9, ca: 15, fe: 0.5, fiber: 0.0, waste: 0, price: 128 },
+  { id: 'f91', cat: '肉類', name: '冷凍しゅうまい（給食用）', energy: 198, protein: 9.4, fat: 9.6, carb: 18.2, salt: 1.1, ca: 18, fe: 0.7, fiber: 1.2, waste: 0, price: 88 },
+
   { id: 'f42', cat: '卵・乳類', name: '給食用牛乳（普通牛乳 200ml=206g）', energy: 61, protein: 3.3, fat: 3.8, carb: 4.8, salt: 0.1, ca: 110, fe: 0.02, fiber: 0.0, waste: 0, price: 28 },
   { id: 'f43', cat: '卵・乳類', name: '鶏卵（全卵・生）', energy: 142, protein: 12.2, fat: 10.2, carb: 0.4, salt: 0.4, ca: 46, fe: 1.5, fiber: 0.0, waste: 15, price: 45 },
   { id: 'f44', cat: '卵・乳類', name: 'プロセスチーズ（給食小袋）', energy: 313, protein: 22.7, fat: 26.0, carb: 1.3, salt: 2.8, ca: 630, fe: 0.3, fiber: 0.0, waste: 0, price: 155 },
   { id: 'f45', cat: '卵・乳類', name: 'ヨーグルト（全脂無糖）', energy: 56, protein: 3.6, fat: 3.0, carb: 4.9, salt: 0.1, ca: 120, fe: 0.1, fiber: 0.0, waste: 0, price: 44 },
+
   { id: 'f46', cat: '油脂・調味料', name: 'サラダ油（調合植物油）', energy: 884, protein: 0.0, fat: 100.0, carb: 0.0, salt: 0.0, ca: 0, fe: 0.0, fiber: 0.0, waste: 0, price: 45 },
   { id: 'f47', cat: '油脂・調味料', name: 'ごま油', energy: 884, protein: 0.0, fat: 100.0, carb: 0.0, salt: 0.0, ca: 0, fe: 0.0, fiber: 0.0, waste: 0, price: 95 },
   { id: 'f48', cat: '油脂・調味料', name: 'バター（有塩）', energy: 700, protein: 0.6, fat: 81.0, carb: 0.2, salt: 1.9, ca: 15, fe: 0.0, fiber: 0.0, waste: 0, price: 165 },
@@ -706,81 +809,208 @@ const DEFAULT_FOODS = [
   { id: 'f54', cat: '油脂・調味料', name: 'トマトケチャップ', energy: 107, protein: 1.6, fat: 0.1, carb: 26.6, salt: 3.3, ca: 16, fe: 0.7, fiber: 1.4, waste: 0, price: 44 },
   { id: 'f55', cat: '油脂・調味料', name: '中濃ソース', energy: 128, protein: 0.7, fat: 0.2, carb: 31.1, salt: 5.7, ca: 17, fe: 0.9, fiber: 0.8, waste: 0, price: 42 },
   { id: 'f56', cat: '油脂・調味料', name: 'カレールウ（給食用フレーク）', energy: 492, protein: 7.4, fat: 32.8, carb: 44.5, salt: 10.2, ca: 45, fe: 3.2, fiber: 4.2, waste: 0, price: 98 },
-  { id: 'f57', cat: '油脂・調味料', name: 'マヨネーズ（全卵型）', energy: 669, protein: 1.5, fat: 76.0, carb: 1.7, salt: 1.9, ca: 9, fe: 0.3, fiber: 0.0, waste: 0, price: 65 }
+  { id: 'f57', cat: '油脂・調味料', name: 'マヨネーズ（全卵型）', energy: 669, protein: 1.5, fat: 76.0, carb: 1.7, salt: 1.9, ca: 9, fe: 0.3, fiber: 0.0, waste: 0, price: 65 },
+  { id: 'f94', cat: '油脂・調味料', name: 'ホワイトソース（給食用ルウ）', energy: 505, protein: 6.8, fat: 34.0, carb: 43.2, salt: 8.5, ca: 60, fe: 0.6, fiber: 1.5, waste: 0, price: 92 },
+  { id: 'f95', cat: '油脂・調味料', name: 'デミグラスソース（給食用）', energy: 112, protein: 3.2, fat: 4.5, carb: 14.5, salt: 2.8, ca: 25, fe: 1.1, fiber: 1.2, waste: 0, price: 78 },
+  { id: 'f96', cat: '油脂・調味料', name: 'オイスターソース', energy: 109, protein: 5.2, fat: 0.1, carb: 21.8, salt: 12.2, ca: 18, fe: 1.4, fiber: 0.2, waste: 0, price: 72 },
+  { id: 'f97', cat: '油脂・調味料', name: 'みりん（本みりん）', energy: 241, protein: 0.3, fat: 0.0, carb: 43.2, salt: 0.0, ca: 2, fe: 0.1, fiber: 0.0, waste: 0, price: 48 },
+  { id: 'f98', cat: '油脂・調味料', name: '料理酒（清酒）', energy: 107, protein: 0.4, fat: 0.0, carb: 4.9, salt: 1.5, ca: 5, fe: 0.1, fiber: 0.0, waste: 0, price: 36 },
+  { id: 'f99', cat: '油脂・調味料', name: '顆粒和風だし・中華だし（減塩）', energy: 215, protein: 18.0, fat: 1.5, carb: 32.0, salt: 28.0, ca: 35, fe: 0.8, fiber: 0.5, waste: 0, price: 110 }
 ];
 
-// サンプル献立プリセット
-const PRESETS = {
-  curry: {
-    title: '麦ごはん・ポークカレー・海藻サラダ・牛乳',
-    grade: 'mid',
-    items: [
-      { dishType: '主食', foodId: 'f01', netWeight: 70 },
-      { dishType: '主食', foodId: 'f02', netWeight: 10 },
-      { dishType: '主菜', foodId: 'f36', netWeight: 45 },
-      { dishType: '主菜', foodId: 'f15', netWeight: 50 },
-      { dishType: '主菜', foodId: 'f16', netWeight: 25 },
-      { dishType: '主菜', foodId: 'f07', netWeight: 40 },
-      { dishType: '主菜', foodId: 'f46', netWeight: 3 },
-      { dishType: '主菜', foodId: 'f56', netWeight: 13 },
-      { dishType: '副菜', foodId: 'f17', netWeight: 35 },
-      { dishType: '副菜', foodId: 'f22', netWeight: 15 },
-      { dishType: '副菜', foodId: 'f28', netWeight: 1.5 },
-      { dishType: '副菜', foodId: 'f49', netWeight: 2.0 },
-      { dishType: '副菜', foodId: 'f53', netWeight: 3.0 },
-      { dishType: '副菜', foodId: 'f52', netWeight: 1.5 },
-      { dishType: '牛乳・デザート', foodId: 'f42', netWeight: 206 }
-    ]
-  },
-  washoku: {
-    title: 'ごはん・さばの味噌煮・小松菜のごま和え・けんちん汁・牛乳',
-    grade: 'mid',
-    items: [
-      { dishType: '主食', foodId: 'f01', netWeight: 80 },
-      { dishType: '主菜', foodId: 'f31', netWeight: 55 },
-      { dishType: '主菜', foodId: 'f50', netWeight: 6 },
-      { dishType: '主菜', foodId: 'f52', netWeight: 4 },
-      { dishType: '副菜', foodId: 'f19', netWeight: 40 },
-      { dishType: '副菜', foodId: 'f21', netWeight: 20 },
-      { dishType: '副菜', foodId: 'f14', netWeight: 3 },
-      { dishType: '副菜', foodId: 'f49', netWeight: 2.5 },
-      { dishType: '汁物', foodId: 'f11', netWeight: 25 },
-      { dishType: '汁物', foodId: 'f23', netWeight: 25 },
-      { dishType: '汁物', foodId: 'f16', netWeight: 15 },
-      { dishType: '汁物', foodId: 'f24', netWeight: 10 },
-      { dishType: '汁物', foodId: 'f47', netWeight: 1 },
-      { dishType: '汁物', foodId: 'f49', netWeight: 3.5 },
-      { dishType: '牛乳・デザート', foodId: 'f42', netWeight: 206 }
-    ]
-  },
-  iron: {
-    title: 'ごはん・レバニラ炒め・ひじきと大豆の煮物・みそ汁・牛乳',
-    grade: 'high',
-    items: [
-      { dishType: '主食', foodId: 'f01', netWeight: 95 },
-      { dishType: '主菜', foodId: 'f41', netWeight: 30 },
-      { dishType: '主菜', foodId: 'f37', netWeight: 25 },
-      { dishType: '主菜', foodId: 'f21', netWeight: 45 },
-      { dishType: '主菜', foodId: 'f16', netWeight: 15 },
-      { dishType: '主菜', foodId: 'f46', netWeight: 4 },
-      { dishType: '主菜', foodId: 'f49', netWeight: 4 },
-      { dishType: '副菜', foodId: 'f29', netWeight: 3 },
-      { dishType: '副菜', foodId: 'f12', netWeight: 8 },
-      { dishType: '副菜', foodId: 'f26', netWeight: 15 },
-      { dishType: '副菜', foodId: 'f49', netWeight: 2.5 },
-      { dishType: '副菜', foodId: 'f52', netWeight: 2.5 },
-      { dishType: '汁物', foodId: 'f07', netWeight: 30 },
-      { dishType: '汁物', foodId: 'f15', netWeight: 20 },
-      { dishType: '汁物', foodId: 'f50', netWeight: 8 },
-      { dishType: '牛乳・デザート', foodId: 'f42', netWeight: 206 }
-    ]
-  }
-};
+// 全60種類 サンプル献立ライブラリ（和食22・洋食20・中華/エスニック18）
+const PRESET_LIST = [
+  // ===== 和食（22種） =====
+  { id: 'w01', genre: '和食', grade: 'mid', title: 'ごはん・さばの味噌煮・小松菜のごま和え・けんちん汁・牛乳', items: [
+    ['主食','f01',80],['主菜','f31',55],['主菜','f50',6],['主菜','f52',4],['主菜','f97',3],['副菜','f19',40],['副菜','f21',20],['副菜','f14',3],['副菜','f49',2.5],['汁物','f11',25],['汁物','f23',25],['汁物','f16',15],['汁物','f24',10],['汁物','f47',1],['汁物','f49',3.5],['牛乳・デザート','f42',206]
+  ]},
+  { id: 'w02', genre: '和食', grade: 'mid', title: 'ごはん・鮭の塩焼き・ひじきと大豆の煮物・豚汁・牛乳', items: [
+    ['主食','f01',80],['主菜','f30',55],['主菜','f51',0.6],['副菜','f29',3],['副菜','f63',15],['副菜','f16',12],['副菜','f12',6],['副菜','f49',2.5],['副菜','f52',2],['汁物','f37',20],['汁物','f23',25],['汁物','f09',25],['汁物','f68',10],['汁物','f50',7],['牛乳・デザート','f42',206]
+  ]},
+  { id: 'w03', genre: '和食', grade: 'mid', title: 'ごはん・肉じゃが・切り干し大根の煮物・わかめと豆腐のみそ汁・牛乳', items: [
+    ['主食','f01',80],['主菜','f37',45],['主菜','f07',75],['主菜','f15',35],['主菜','f16',15],['主菜','f49',4.5],['主菜','f52',3.5],['副菜','f62',6],['副菜','f12',6],['副菜','f49',2],['汁物','f11',25],['汁物','f28',1],['汁物','f50',6],['牛乳・デザート','f42',206]
+  ]},
+  { id: 'w04', genre: '和食', grade: 'mid', title: '親子丼（麦ごはん）・キャベツの即席漬け・大根と油揚げのみそ汁・牛乳', items: [
+    ['主食','f01',70],['主食','f02',10],['主菜','f39',45],['主菜','f43',35],['主菜','f15',35],['主菜','f49',4.5],['主菜','f52',3],['副菜','f17',40],['副菜','f22',15],['副菜','f51',0.4],['汁物','f23',30],['汁物','f12',6],['汁物','f50',6.5],['牛乳・デザート','f42',206]
+  ]},
+  { id: 'w05', genre: '和食', grade: 'high', title: 'わかめごはん・鶏の唐揚げ・ごぼうサラダ・すまし汁・牛乳', items: [
+    ['主食','f01',90],['主食','f28',1.5],['主菜','f39',65],['主菜','f10',8],['主菜','f46',6],['主菜','f49',3.5],['副菜','f24',25],['副菜','f16',12],['副菜','f57',6],['副菜','f14',2],['汁物','f11',25],['汁物','f19',20],['汁物','f49',3],['汁物','f51',0.4],['牛乳・デザート','f42',206]
+  ]},
+  { id: 'w06', genre: '和食', grade: 'mid', title: 'ごはん・あじの南蛮漬け・ほうれん草のおひたし・さつま汁・牛乳', items: [
+    ['主食','f01',80],['主菜','f32',55],['主菜','f15',20],['主菜','f16',10],['主菜','f10',5],['主菜','f46',5],['主菜','f53',5],['主菜','f49',3.5],['主菜','f52',3],['副菜','f20',40],['副菜','f49',2],['汁物','f08',35],['汁物','f23',20],['汁物','f50',6.5],['牛乳・デザート','f42',206]
+  ]},
+  { id: 'w07', genre: '和食', grade: 'mid', title: '五目炊き込みごはん・ししゃもの磯辺揚げ・白菜のゆかり和え・かき玉汁・牛乳', items: [
+    ['主食','f01',80],['主食','f39',20],['主食','f16',12],['主食','f24',10],['主食','f12',6],['主食','f49',3.5],['主菜','f83',35],['主菜','f06',5],['主菜','f46',4],['副菜','f18',45],['副菜','f51',0.4],['汁物','f43',20],['汁物','f19',15],['汁物','f49',2.5],['汁物','f51',0.4],['牛乳・デザート','f42',206]
+  ]},
+  { id: 'w08', genre: '和食', grade: 'high', title: 'ごはん・ぶり大根・ブロッコリーのおかか和え・なめこと豆腐のみそ汁・牛乳', items: [
+    ['主食','f01',95],['主菜','f80',55],['主菜','f23',55],['主菜','f49',4.5],['主菜','f52',3.5],['副菜','f25',40],['副菜','f49',2],['汁物','f74',20],['汁物','f11',25],['汁物','f68',8],['汁物','f50',7],['牛乳・デザート','f42',206]
+  ]},
+  { id: 'w09', genre: '和食', grade: 'low', title: '鶏そぼろ二色丼（ごはん）・じゃがいもとわかめのみそ汁・みかん・牛乳', items: [
+    ['主食','f01',65],['主菜','f88',35],['主菜','f43',25],['主菜','f49',3.5],['主菜','f52',3],['汁物','f07',30],['汁物','f28',1],['汁物','f50',5.5],['牛乳・デザート','f77',50],['牛乳・デザート','f42',206]
+  ]},
+  { id: 'w10', genre: '和食', grade: 'mid', title: 'きつねうどん（ソフトめん）・ちくわの磯辺揚げ・茎わかめのサラダ・牛乳', items: [
+    ['主食','f04',150],['主食','f12',15],['主食','f68',12],['主食','f49',5],['主食','f97',3],['主菜','f35',30],['主菜','f06',6],['主菜','f46',5],['副菜','f17',35],['副菜','f22',15],['副菜','f28',1.5],['副菜','f53',3],['副菜','f49',1.5],['牛乳・デザート','f42',206]
+  ]},
+  { id: 'w11', genre: '和食', grade: 'mid', title: 'ごはん・さわらの西京焼き・きんぴらごぼう・沢煮椀・牛乳', items: [
+    ['主食','f01',80],['主菜','f82',55],['主菜','f50',6],['主菜','f97',3],['副菜','f24',25],['副菜','f16',12],['副菜','f47',1.5],['副菜','f49',2.5],['副菜','f52',2],['汁物','f36',15],['汁物','f23',20],['汁物','f72',10],['汁物','f49',2.5],['汁物','f51',0.4],['牛乳・デザート','f42',206]
+  ]},
+  { id: 'w12', genre: '和食', grade: 'high', title: 'ごはん・すき焼き風煮・もやしと胡瓜の酢の物・りんご・牛乳', items: [
+    ['主食','f01',95],['主菜','f87',45],['主菜','f65',35],['主菜','f18',40],['主菜','f68',15],['主菜','f60',8],['主菜','f49',5.5],['主菜','f52',4.5],['副菜','f21',30],['副菜','f22',15],['副菜','f53',4],['副菜','f49',2],['牛乳・デザート','f76',50],['牛乳・デザート','f42',206]
+  ]},
+  { id: 'w13', genre: '和食', grade: 'mid', title: 'ちらし寿司・たらの天ぷら・菜の花（小松菜）のおひたし・すまし汁・牛乳', items: [
+    ['主食','f01',80],['主食','f16',10],['主食','f71',10],['主食','f12',6],['主食','f53',6],['主食','f52',4],['主食','f51',0.6],['主菜','f79',50],['主菜','f06',7],['主菜','f46',5],['副菜','f19',35],['副菜','f49',2],['汁物','f11',20],['汁物','f68',8],['汁物','f49',2.5],['牛乳・デザート','f42',206]
+  ]},
+  { id: 'w14', genre: '和食', grade: 'mid', title: 'ごはん・高野豆腐の卵とじ・さばの竜田揚げ・小松菜のみそ汁・牛乳', items: [
+    ['主食','f01',80],['主菜','f31',45],['主菜','f10',5],['主菜','f46',4],['主菜','f49',2.5],['副菜','f64',8],['副菜','f43',20],['副菜','f16',10],['副菜','f49',2],['副菜','f52',2],['汁物','f19',25],['汁物','f15',15],['汁物','f50',6],['牛乳・デザート','f42',206]
+  ]},
+  { id: 'w15', genre: '和食', grade: 'high', title: 'カレーうどん（ソフトめん）・大豆と小魚の揚げ煮・キャベツの甘酢和え・牛乳', items: [
+    ['主食','f04',165],['主食','f37',30],['主食','f15',30],['主食','f16',15],['主食','f56',10],['主食','f49',3],['主菜','f63',25],['主菜','f33',5],['主菜','f10',4],['主菜','f46',4],['主菜','f52',3],['副菜','f17',40],['副菜','f53',4],['副菜','f52',2],['副菜','f51',0.3],['牛乳・デザート','f42',206]
+  ]},
+  { id: 'w16', genre: '和食', grade: 'mid', title: 'ごはん・豚肉のしょうが焼き・かぼちゃのそぼろ煮・もやしのみそ汁・牛乳', items: [
+    ['主食','f01',80],['主菜','f36',55],['主菜','f17',30],['主菜','f46',2],['主菜','f49',4],['主菜','f97',3],['副菜','f69',45],['副菜','f88',12],['副菜','f49',2],['副菜','f52',2],['汁物','f21',25],['汁物','f12',6],['汁物','f50',6.5],['牛乳・デザート','f42',206]
+  ]},
+  { id: 'w17', genre: '和食', grade: 'mid', title: 'さつまいもおこわ風ごはん・ほっけの塩焼き・白菜の昆布和え・すまし汁・牛乳', items: [
+    ['主食','f01',65],['主食','f58',15],['主食','f08',30],['主食','f51',0.5],['主菜','f81',55],['副菜','f18',45],['副菜','f22',15],['副菜','f49',2],['汁物','f11',25],['汁物','f16',10],['汁物','f49',2.5],['汁物','f51',0.4],['牛乳・デザート','f42',206]
+  ]},
+  { id: 'w18', genre: '和食', grade: 'mid', title: 'ごはん・筑前煮・厚焼き卵・じゃがいもと玉ねぎのみそ汁・牛乳', items: [
+    ['主食','f01',80],['主菜','f39',40],['主菜','f71',20],['主菜','f24',15],['主菜','f16',15],['主菜','f61',15],['主菜','f49',4.5],['主菜','f52',3.5],['副菜','f43',30],['副菜','f52',2],['副菜','f51',0.3],['汁物','f07',30],['汁物','f15',20],['汁物','f50',6.5],['牛乳・デザート','f42',206]
+  ]},
+  { id: 'w19', genre: '和食', grade: 'high', title: '牛丼（麦ごはん）・大根と水菜のサラダ・豆腐とわかめのすまし汁・牛乳', items: [
+    ['主食','f01',85],['主食','f02',10],['主菜','f87',50],['主菜','f15',45],['主菜','f60',8],['主菜','f49',5],['主菜','f52',4],['副菜','f23',30],['副菜','f73',15],['副菜','f49',2],['副菜','f53',3],['汁物','f11',25],['汁物','f28',1],['汁物','f49',2.5],['汁物','f51',0.3],['牛乳・デザート','f42',206]
+  ]},
+  { id: 'w20', genre: '和食', grade: 'mid', title: 'ごはん・鮭のちゃんちゃん焼き風・切り干し大根のサラダ・みそ汁・牛乳', items: [
+    ['主食','f01',80],['主菜','f30',50],['主菜','f17',35],['主菜','f15',20],['主菜','f16',10],['主菜','f48',3],['主菜','f50',5],['主菜','f52',2.5],['副菜','f62',5],['副菜','f22',15],['副菜','f49',2],['副菜','f53',3],['汁物','f23',25],['汁物','f68',8],['汁物','f50',5.5],['牛乳・デザート','f42',206]
+  ]},
+  { id: 'w21', genre: '和食', grade: 'high', title: '深川めし風あさりごはん・鶏肉の照り焼き・キャベツの塩昆布和え・すまし汁・牛乳', items: [
+    ['主食','f01',90],['主食','f86',20],['主食','f24',12],['主食','f12',6],['主食','f49',3.5],['主菜','f39',50],['主菜','f49',3],['主菜','f52',2.5],['副菜','f17',40],['副菜','f22',15],['副菜','f47',1],['副菜','f51',0.4],['汁物','f11',25],['汁物','f20',15],['汁物','f49',2.5],['牛乳・デザート','f42',206]
+  ]},
+  { id: 'w22', genre: '和食', grade: 'low', title: 'ごはん・おでん（大根・卵・ちくわ・厚揚げ）・ほうれん草のごま和え・牛乳', items: [
+    ['主食','f01',65],['主菜','f23',45],['主菜','f43',35],['主菜','f35',20],['主菜','f65',25],['主菜','f61',20],['主菜','f49',4],['主菜','f52',2.5],['主菜','f51',0.4],['副菜','f20',35],['副菜','f14',3],['副菜','f49',2],['牛乳・デザート','f42',206]
+  ]},
+
+  // ===== 洋食（20種） =====
+  { id: 'y01', genre: '洋食', grade: 'mid', title: '麦ごはん・ポークカレー・海藻サラダ・牛乳', items: [
+    ['主食','f01',70],['主食','f02',10],['主菜','f36',45],['主菜','f15',50],['主菜','f16',25],['主菜','f07',40],['主菜','f46',3],['主菜','f56',13],['副菜','f17',35],['副菜','f22',15],['副菜','f28',1.5],['副菜','f49',2],['副菜','f53',3],['副菜','f52',1.5],['牛乳・デザート','f42',206]
+  ]},
+  { id: 'y02', genre: '洋食', grade: 'mid', title: 'コッペパン・クリームシチュー・ツナとコーンのサラダ・りんご・牛乳', items: [
+    ['主食','f03',75],['主菜','f38',40],['主菜','f07',40],['主菜','f15',35],['主菜','f16',20],['主菜','f25',15],['主菜','f94',14],['副菜','f17',35],['副菜','f34',12],['副菜','f26',12],['副菜','f53',3],['副菜','f46',2],['副菜','f51',0.3],['牛乳・デザート','f76',45],['牛乳・デザート','f42',206]
+  ]},
+  { id: 'y03', genre: '洋食', grade: 'mid', title: 'チキンライス・オムレツ・コールスローサラダ・コンソメスープ・牛乳', items: [
+    ['主食','f01',75],['主食','f38',25],['主食','f15',25],['主食','f16',10],['主食','f54',15],['主食','f48',3],['主菜','f43',45],['主菜','f54',6],['副菜','f17',40],['副菜','f26',10],['副菜','f57',5],['汁物','f15',15],['汁物','f20',15],['汁物','f51',0.6],['牛乳・デザート','f42',206]
+  ]},
+  { id: 'y04', genre: '洋食', grade: 'high', title: 'ミートソーススパゲッティ・フレンチサラダ・フルーツヨーグルト・牛乳', items: [
+    ['主食','f04',170],['主食','f40',45],['主食','f15',40],['主食','f16',20],['主食','f93',35],['主食','f54',12],['主食','f51',0.6],['副菜','f17',40],['副菜','f22',15],['副菜','f53',4],['副菜','f46',3],['副菜','f51',0.4],['牛乳・デザート','f45',45],['牛乳・デザート','f77',25],['牛乳・デザート','f42',206]
+  ]},
+  { id: 'y05', genre: '洋食', grade: 'mid', title: 'ごはん・煮込みハンバーグ・粉ふきいも・野菜たっぷりコンソメスープ・牛乳', items: [
+    ['主食','f01',80],['主菜','f40',45],['主菜','f15',25],['主菜','f92',6],['主菜','f43',10],['主菜','f95',18],['主菜','f54',6],['副菜','f07',45],['副菜','f51',0.3],['汁物','f17',25],['汁物','f16',12],['汁物','f27',10],['汁物','f51',0.6],['牛乳・デザート','f42',206]
+  ]},
+  { id: 'y06', genre: '洋食', grade: 'mid', title: '食パン・チリコンカン・ブロッコリーと卵のサラダ・バナナ・牛乳', items: [
+    ['主食','f03',75],['主菜','f40',30],['主菜','f63',35],['主菜','f15',30],['主菜','f93',25],['主菜','f54',8],['主菜','f51',0.5],['副菜','f25',30],['副菜','f43',15],['副菜','f57',5],['牛乳・デザート','f78',50],['牛乳・デザート','f42',206]
+  ]},
+  { id: 'y07', genre: '洋食', grade: 'high', title: 'ハヤシライス（麦ごはん）・大根とツナのサラダ・みかん・牛乳', items: [
+    ['主食','f01',85],['主食','f02',10],['主菜','f87',45],['主菜','f15',55],['主菜','f27',15],['主菜','f95',22],['主菜','f54',8],['主菜','f48',3],['副菜','f23',35],['副菜','f34',12],['副菜','f53',3],['副菜','f49',2],['牛乳・デザート','f77',50],['牛乳・デザート','f42',206]
+  ]},
+  { id: 'y08', genre: '洋食', grade: 'mid', title: 'マカロニグラタン・コッペパン・キャベツのスープ煮・牛乳', items: [
+    ['主食','f03',65],['主菜','f59',22],['主菜','f38',35],['主菜','f15',30],['主菜','f94',14],['主菜','f44',12],['主菜','f92',3],['汁物','f17',40],['汁物','f16',15],['汁物','f89',8],['汁物','f51',0.6],['牛乳・デザート','f42',206]
+  ]},
+  { id: 'y09', genre: '洋食', grade: 'mid', title: 'ごはん・白身魚（たら）のフライ・ボイルキャベツ・ミネストローネ・牛乳', items: [
+    ['主食','f01',80],['主菜','f79',55],['主菜','f06',6],['主菜','f92',8],['主菜','f46',6],['主菜','f55',6],['副菜','f17',40],['汁物','f15',20],['汁物','f16',12],['汁物','f07',20],['汁物','f93',20],['汁物','f51',0.6],['牛乳・デザート','f42',206]
+  ]},
+  { id: 'y10', genre: '洋食', grade: 'high', title: 'ナポリタンスパゲッティ・海藻とコーンのサラダ・わかめスープ・牛乳', items: [
+    ['主食','f04',175],['主食','f90',25],['主食','f15',35],['主食','f66',12],['主食','f54',22],['主食','f46',3],['副菜','f17',35],['副菜','f26',12],['副菜','f28',1.5],['副菜','f53',3],['副菜','f49',2],['汁物','f28',1],['汁物','f15',15],['汁物','f51',0.6],['牛乳・デザート','f42',206]
+  ]},
+  { id: 'y11', genre: '洋食', grade: 'high', title: '食パン・ポトフ・鶏肉のハーブ（塩）焼き・ポテトサラダ・牛乳', items: [
+    ['主食','f03',85],['主菜','f39',50],['主菜','f51',0.6],['汁物','f90',20],['汁物','f17',35],['汁物','f16',15],['汁物','f15',20],['汁物','f51',0.6],['副菜','f07',45],['副菜','f22',12],['副菜','f57',6],['牛乳・デザート','f42',206]
+  ]},
+  { id: 'y12', genre: '洋食', grade: 'mid', title: 'キーマカレー（麦ごはん）・キャベツとリンゴのサラダ・牛乳', items: [
+    ['主食','f01',70],['主食','f02',10],['主菜','f40',45],['主菜','f15',45],['主菜','f16',20],['主菜','f63',15],['主菜','f56',12],['主菜','f54',6],['副菜','f17',35],['副菜','f76',20],['副菜','f53',3],['副菜','f46',2],['副菜','f51',0.3],['牛乳・デザート','f42',206]
+  ]},
+  { id: 'y13', genre: '洋食', grade: 'mid', title: 'ごはん・鶏肉のトマト煮込み・マカロニサラダ・卵スープ・牛乳', items: [
+    ['主食','f01',80],['主菜','f39',50],['主菜','f15',30],['主菜','f93',30],['主菜','f54',6],['主菜','f51',0.5],['副菜','f59',12],['副菜','f22',15],['副菜','f57',6],['汁物','f43',20],['汁物','f20',15],['汁物','f51',0.6],['牛乳・デザート','f42',206]
+  ]},
+  { id: 'y14', genre: '洋食', grade: 'low', title: 'きなこ揚げパン・春雨スープ・中華風サラダ・牛乳', items: [
+    ['主食','f03',65],['主食','f46',8],['主食','f100',6],['主食','f52',5],['汁物','f60',10],['汁物','f38',20],['汁物','f18',25],['汁物','f16',10],['汁物','f49',2.5],['汁物','f51',0.3],['副菜','f17',30],['副菜','f22',12],['副菜','f53',3],['副菜','f47',1.5],['牛乳・デザート','f42',206]
+  ]},
+  { id: 'y15', genre: '洋食', grade: 'high', title: 'えびピラフ・鶏肉の照り焼き・ジュリエンヌスープ・牛乳', items: [
+    ['主食','f01',90],['主食','f84',25],['主食','f15',25],['主食','f16',12],['主食','f26',12],['主食','f48',4],['主食','f51',0.7],['主菜','f39',50],['主菜','f49',3],['主菜','f52',2],['汁物','f17',25],['汁物','f16',10],['汁物','f89',8],['汁物','f51',0.6],['牛乳・デザート','f42',206]
+  ]},
+  { id: 'y16', genre: '洋食', grade: 'mid', title: 'ごはん・鮭のムニエル（バター醤油）・ジャーマンポテト・コンソメスープ・牛乳', items: [
+    ['主食','f01',80],['主菜','f30',55],['主菜','f06',4],['主菜','f48',3],['主菜','f49',2],['副菜','f07',45],['副菜','f89',10],['副菜','f15',15],['副菜','f51',0.3],['汁物','f17',25],['汁物','f16',10],['汁物','f51',0.6],['牛乳・デザート','f42',206]
+  ]},
+  { id: 'y17', genre: '洋食', grade: 'high', title: 'シーフードカレー（麦ごはん）・グリーンサラダ・ヨーグルト・牛乳', items: [
+    ['主食','f01',85],['主食','f02',10],['主菜','f84',25],['主菜','f85',25],['主菜','f15',50],['主菜','f16',20],['主菜','f07',35],['主菜','f56',14],['副菜','f17',35],['副菜','f25',15],['副菜','f53',3],['副菜','f46',2],['牛乳・デザート','f45',45],['牛乳・デザート','f42',206]
+  ]},
+  { id: 'y18', genre: '洋食', grade: 'mid', title: '食パン・ボルシチ風トマトシチュー・チーズサラダ・牛乳', items: [
+    ['主食','f03',75],['主菜','f87',35],['主菜','f07',40],['主菜','f15',30],['主菜','f16',15],['主菜','f17',25],['主菜','f93',30],['主菜','f51',0.7],['副菜','f22',20],['副菜','f26',12],['副菜','f44',12],['副菜','f53',3],['副菜','f46',2],['牛乳・デザート','f42',206]
+  ]},
+  { id: 'y19', genre: '洋食', grade: 'mid', title: 'タコライス（麦ごはん）・もずく（わかめ）と卵のスープ・みかん・牛乳', items: [
+    ['主食','f01',70],['主食','f02',10],['主菜','f40',45],['主菜','f15',30],['主菜','f54',12],['主菜','f17',30],['主菜','f44',10],['主菜','f51',0.4],['汁物','f43',20],['汁物','f28',1],['汁物','f49',2.5],['汁物','f51',0.4],['牛乳・デザート','f77',45],['牛乳・デザート','f42',206]
+  ]},
+  { id: 'y20', genre: '洋食', grade: 'low', title: 'クリームスパゲッティ（ほうれん草とベーコン）・カリカリ大豆サラダ・牛乳', items: [
+    ['主食','f04',140],['主食','f89',15],['主食','f20',25],['主食','f15',25],['主食','f94',13],['主食','f51',0.4],['副菜','f63',20],['副菜','f17',30],['副菜','f22',12],['副菜','f53',3],['副菜','f46',2],['牛乳・デザート','f42',206]
+  ]},
+
+  // ===== 中華・エスニック（18種） =====
+  { id: 'c01', genre: '中華・エスニック', grade: 'mid', title: 'ごはん・麻婆豆腐・バンサンスー（春雨サラダ）・中華コーンスープ・牛乳', items: [
+    ['主食','f01',80],['主菜','f11',70],['主菜','f40',35],['主菜','f68',15],['主菜','f50',5],['主菜','f49',3],['主菜','f10',3],['副菜','f60',8],['副菜','f22',20],['副菜','f16',10],['副菜','f53',3],['副菜','f49',2],['汁物','f26',20],['汁物','f43',15],['汁物','f51',0.5],['牛乳・デザート','f42',206]
+  ]},
+  { id: 'c02', genre: '中華・エスニック', grade: 'high', title: '中華丼（麦ごはん）・しゅうまい・もやしのナムル・牛乳', items: [
+    ['主食','f01',85],['主食','f02',10],['主菜','f37',35],['主菜','f84',15],['主菜','f18',45],['主菜','f16',15],['主菜','f72',12],['主菜','f96',4],['主菜','f49',3],['主菜','f10',4],['副菜','f91',30],['副菜','f21',30],['副菜','f47',1.5],['副菜','f51',0.4],['牛乳・デザート','f42',206]
+  ]},
+  { id: 'c03', genre: '中華・エスニック', grade: 'mid', title: 'ビビンバ（麦ごはん）・わかめスープ・りんご・牛乳', items: [
+    ['主食','f01',70],['主食','f02',10],['主菜','f87',40],['主菜','f20',30],['主菜','f21',30],['主菜','f16',15],['主菜','f43',20],['主菜','f49',4],['主菜','f47',2],['主菜','f14',2],['汁物','f28',1.5],['汁物','f68',10],['汁物','f51',0.6],['牛乳・デザート','f76',45],['牛乳・デザート','f42',206]
+  ]},
+  { id: 'c04', genre: '中華・エスニック', grade: 'high', title: '醤油ラーメン（中華めん）・春巻き（しゅうまい）・大根の中華サラダ・牛乳', items: [
+    ['主食','f05',175],['主食','f37',25],['主食','f21',35],['主食','f68',12],['主食','f49',6],['主食','f96',3],['主菜','f91',35],['副菜','f23',35],['副菜','f22',15],['副菜','f53',3],['副菜','f47',1.5],['副菜','f49',2],['牛乳・デザート','f42',206]
+  ]},
+  { id: 'c05', genre: '中華・エスニック', grade: 'mid', title: 'ごはん・回鍋肉（ホイコーロー）・切り干し大根の中華和え・卵とトマトのスープ・牛乳', items: [
+    ['主食','f01',80],['主菜','f37',45],['主菜','f17',45],['主菜','f66',15],['主菜','f50',5],['主菜','f49',2.5],['主菜','f52',2.5],['副菜','f62',5],['副菜','f22',15],['副菜','f47',1.5],['副菜','f49',2],['汁物','f43',20],['汁物','f93',15],['汁物','f51',0.5],['牛乳・デザート','f42',206]
+  ]},
+  { id: 'c06', genre: '中華・エスニック', grade: 'mid', title: 'ごはん・酢豚・もやしと胡瓜のピリ辛和え・わかめスープ・牛乳', items: [
+    ['主食','f01',80],['主菜','f36',50],['主菜','f15',30],['主菜','f16',15],['主菜','f66',12],['主菜','f10',5],['主菜','f46',5],['主菜','f54',8],['主菜','f53',5],['主菜','f49',3],['副菜','f21',30],['副菜','f22',15],['副菜','f47',1.5],['副菜','f49',2],['汁物','f28',1],['汁物','f15',15],['汁物','f51',0.5],['牛乳・デザート','f42',206]
+  ]},
+  { id: 'c07', genre: '中華・エスニック', grade: 'high', title: '五目チャーハン・鶏肉の油淋鶏（ユーリンチー）風・春雨スープ・牛乳', items: [
+    ['主食','f01',85],['主食','f43',25],['主食','f89',12],['主食','f68',12],['主食','f46',3],['主食','f51',0.6],['主菜','f39',50],['主菜','f10',5],['主菜','f46',4],['主菜','f49',3],['主菜','f53',3],['汁物','f60',8],['汁物','f18',25],['汁物','f49',2.5],['汁物','f51',0.3],['牛乳・デザート','f42',206]
+  ]},
+  { id: 'c08', genre: '中華・エスニック', grade: 'mid', title: 'ごはん・青椒肉絲（チンジャオロース）・バンバンジーサラダ・豆腐の中華スープ・牛乳', items: [
+    ['主食','f01',80],['主菜','f36',45],['主菜','f66',25],['主菜','f72',25],['主菜','f96',4],['主菜','f49',2.5],['主菜','f47',2],['副菜','f38',20],['副菜','f22',25],['副菜','f14',3],['副菜','f49',2],['副菜','f53',2],['汁物','f11',25],['汁物','f20',15],['汁物','f51',0.5],['牛乳・デザート','f42',206]
+  ]},
+  { id: 'c09', genre: '中華・エスニック', grade: 'high', title: '味噌ラーメン（中華めん）・大学いも・小松菜のナムル・牛乳', items: [
+    ['主食','f05',175],['主食','f40',25],['主食','f21',35],['主食','f26',12],['主食','f50',10],['主菜','f08',50],['主菜','f46',4],['主菜','f52',4],['主菜','f14',1.5],['副菜','f19',35],['副菜','f47',1.5],['副菜','f51',0.4],['牛乳・デザート','f42',206]
+  ]},
+  { id: 'c10', genre: '中華・エスニック', grade: 'high', title: 'ごはん・レバニラ炒め・ひじきと大豆の煮物・みそ汁・牛乳', items: [
+    ['主食','f01',95],['主菜','f41',30],['主菜','f37',25],['主菜','f21',45],['主菜','f67',15],['主菜','f46',4],['主菜','f49',4],['副菜','f29',3],['副菜','f63',12],['副菜','f26',15],['副菜','f49',2],['副菜','f52',2],['汁物','f07',30],['汁物','f15',20],['汁物','f50',7],['牛乳・デザート','f42',206]
+  ]},
+  { id: 'c11', genre: '中華・エスニック', grade: 'mid', title: '麻婆春雨丼（麦ごはん）・しゅうまい・キャベツのナムル・牛乳', items: [
+    ['主食','f01',70],['主食','f02',10],['主菜','f60',18],['主菜','f40',35],['主菜','f16',15],['主菜','f72',12],['主菜','f50',5],['主菜','f49',3],['副菜','f91',30],['副菜','f17',35],['副菜','f47',1.5],['副菜','f51',0.4],['牛乳・デザート','f42',206]
+  ]},
+  { id: 'c12', genre: '中華・エスニック', grade: 'mid', title: 'ごはん・えびのチリソース煮・ほうれん草のナムル・中華卵スープ・牛乳', items: [
+    ['主食','f01',80],['主菜','f84',45],['主菜','f15',25],['主菜','f68',10],['主菜','f54',12],['主菜','f10',4],['主菜','f46',3],['主菜','f51',0.4],['副菜','f20',35],['副菜','f21',20],['副菜','f47',1.5],['副菜','f51',0.4],['汁物','f43',20],['汁物','f28',1],['汁物','f51',0.5],['牛乳・デザート','f42',206]
+  ]},
+  { id: 'c13', genre: '中華・エスニック', grade: 'high', title: 'あんかけ焼きそば（中華めん）・大豆とじゃこの揚げ煮・フルーツヨーグルト・牛乳', items: [
+    ['主食','f05',160],['主食','f37',30],['主食','f18',40],['主食','f16',15],['主食','f96',4],['主食','f49',3],['主食','f10',4],['主菜','f63',25],['主菜','f33',5],['主菜','f46',4],['主菜','f52',3],['牛乳・デザート','f45',45],['牛乳・デザート','f77',25],['牛乳・デザート','f42',206]
+  ]},
+  { id: 'c14', genre: '中華・エスニック', grade: 'mid', title: 'ごはん・鶏肉と大豆の中華炒め・春雨サラダ・わかめスープ・牛乳', items: [
+    ['主食','f01',80],['主菜','f39',45],['主菜','f63',20],['主菜','f16',12],['主菜','f66',12],['主菜','f96',4],['主菜','f49',2.5],['副菜','f60',8],['副菜','f22',20],['副菜','f53',3],['副菜','f49',2],['汁物','f28',1],['汁物','f15',15],['汁物','f51',0.5],['牛乳・デザート','f42',206]
+  ]},
+  { id: 'c15', genre: '中華・エスニック', grade: 'mid', title: 'ガパオライス風（鶏ひき肉の甘辛炒めごはん）・春雨スープ・みかん・牛乳', items: [
+    ['主食','f01',80],['主菜','f88',45],['主菜','f15',30],['主菜','f66',15],['主菜','f43',25],['主菜','f96',5],['主菜','f49',2.5],['汁物','f60',8],['汁物','f17',25],['汁物','f51',0.5],['牛乳・デザート','f77',45],['牛乳・デザート','f42',206]
+  ]},
+  { id: 'c16', genre: '中華・エスニック', grade: 'mid', title: 'ごま味噌中華めん（担々麺風）・きゅうりの華風漬け・りんご・牛乳', items: [
+    ['主食','f05',155],['主食','f40',30],['主食','f20',25],['主食','f14',5],['主食','f50',8],['主食','f49',2],['副菜','f22',40],['副菜','f53',3],['副菜','f47',1.5],['副菜','f49',2],['牛乳・デザート','f76',50],['牛乳・デザート','f42',206]
+  ]},
+  { id: 'c17', genre: '中華・エスニック', grade: 'low', title: 'ごはん・八宝菜・揚げしゅうまい・もやしの中華スープ・牛乳', items: [
+    ['主食','f01',65],['主菜','f37',25],['主菜','f85',15],['主菜','f18',35],['主菜','f16',12],['主菜','f96',3.5],['主菜','f49',2],['主菜','f10',3],['副菜','f91',25],['副菜','f46',3],['汁物','f21',25],['汁物','f68',8],['汁物','f51',0.5],['牛乳・デザート','f42',206]
+  ]},
+  { id: 'c18', genre: '中華・エスニック', grade: 'high', title: 'プルコギ丼（麦ごはん）・トック（白玉）とわかめのスープ・牛乳', items: [
+    ['主食','f01',85],['主食','f02',10],['主菜','f87',50],['主菜','f15',35],['主菜','f16',15],['主菜','f67',12],['主菜','f49',4.5],['主菜','f52',3.5],['主菜','f47',2],['主菜','f14',2],['汁物','f28',1.5],['汁物','f43',20],['汁物','f51',0.6],['牛乳・デザート','f42',206]
+  ]}
+];
 
 let foods = [];
 let menuItems = [];
+let currentGenreFilter = 'ALL';
 
-// 安全なストレージ読み書き（ローカルファイルや制限環境でもエラーを出さない）
 function safeLoad(key, fallback) {
   try {
     const raw = localStorage.getItem(key);
@@ -793,18 +1023,27 @@ function safeLoad(key, fallback) {
 function safeSave(key, data) {
   try {
     localStorage.setItem(key, JSON.stringify(data));
-  } catch (e) {
-    // ストレージ無効環境でも無視して継続
-  }
+  } catch (e) {}
 }
 
 function init() {
-  foods = safeLoad('school_lunch_foods_v2', JSON.parse(JSON.stringify(DEFAULT_FOODS)));
-  const savedMenu = safeLoad('school_lunch_menu_v2', null);
+  const savedFoods = safeLoad('school_lunch_foods_v3', null);
+  if (savedFoods && Array.isArray(savedFoods)) {
+    // 既存データを尊重しつつ不足している新マスタを追加
+    const map = new Map(savedFoods.map(f => [f.id, f]));
+    DEFAULT_FOODS.forEach(df => {
+      if (!map.has(df.id)) map.set(df.id, JSON.parse(JSON.stringify(df)));
+    });
+    foods = Array.from(map.values());
+  } else {
+    foods = JSON.parse(JSON.stringify(DEFAULT_FOODS));
+  }
 
+  const savedMenu = safeLoad('school_lunch_menu_v3', null);
   const today = new Date().toISOString().split('T')[0];
   document.getElementById('menuDate').value = today;
 
+  renderPresetSelect();
   populateFoodSelect();
   renderMasterTable();
 
@@ -816,13 +1055,76 @@ function init() {
     menuItems = savedMenu.items;
     recalculate();
   } else {
-    loadPreset('curry');
+    loadPresetById('y01');
   }
 }
 
+function setGenreFilter(genre, btn) {
+  currentGenreFilter = genre;
+  document.querySelectorAll('.genre-pill').forEach(el => el.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  renderPresetSelect();
+}
+
+function getFilteredPresets() {
+  const kw = document.getElementById('presetSearch').value.trim().toLowerCase();
+  return PRESET_LIST.filter(p => {
+    const matchGenre = currentGenreFilter === 'ALL' || p.genre === currentGenreFilter;
+    const matchKw = !kw || p.title.toLowerCase().includes(kw) || p.genre.toLowerCase().includes(kw);
+    return matchGenre && matchKw;
+  });
+}
+
+function renderPresetSelect() {
+  const sel = document.getElementById('presetSelect');
+  const list = getFilteredPresets();
+  sel.innerHTML = '';
+  if (list.length === 0) {
+    const opt = document.createElement('option');
+    opt.value = '';
+    opt.textContent = '該当する献立がありません';
+    sel.appendChild(opt);
+    return;
+  }
+  const gradeTag = { low: '低学年向け', mid: '中学年向け', high: '高学年向け' };
+  list.forEach((p, idx) => {
+    const opt = document.createElement('option');
+    opt.value = p.id;
+    opt.textContent = `${idx + 1}. 【${p.genre} / ${gradeTag[p.grade]}】 ${p.title}`;
+    sel.appendChild(opt);
+  });
+}
+
+function loadSelectedPreset() {
+  const id = document.getElementById('presetSelect').value;
+  if (id) loadPresetById(id);
+}
+
+function loadRandomPreset() {
+  const list = getFilteredPresets();
+  if (list.length === 0) return;
+  const pick = list[Math.floor(Math.random() * list.length)];
+  document.getElementById('presetSelect').value = pick.id;
+  loadPresetById(pick.id);
+}
+
+function loadPresetById(id) {
+  const p = PRESET_LIST.find(x => x.id === id);
+  if (!p) return;
+  document.getElementById('menuTitle').value = p.title;
+  document.getElementById('gradeSelect').value = p.grade;
+  menuItems = p.items.map((row, idx) => ({
+    uid: 'm_' + Date.now() + '_' + idx,
+    dishType: row[0],
+    foodId: row[1],
+    netWeight: row[2]
+  }));
+  recalculate();
+}
+
 function saveState() {
-  safeSave('school_lunch_foods_v2', foods);
-  safeSave('school_lunch_menu_v2', {
+  safeSave('school_lunch_foods_v3', foods);
+  safeSave('school_lunch_menu_v3', {
     title: document.getElementById('menuTitle').value,
     grade: document.getElementById('gradeSelect').value,
     budgetLimit: Number(document.getElementById('budgetLimit').value),
@@ -853,20 +1155,6 @@ function populateFoodSelect() {
       opt.textContent = `${f.name}（${f.price}円/100g・廃棄${f.waste}%）`;
       sel.appendChild(opt);
     });
-}
-
-function loadPreset(key) {
-  const p = PRESETS[key];
-  if (!p) return;
-  document.getElementById('menuTitle').value = p.title;
-  document.getElementById('gradeSelect').value = p.grade;
-  menuItems = p.items.map((item, idx) => ({
-    uid: 'm_' + Date.now() + '_' + idx,
-    dishType: item.dishType,
-    foodId: item.foodId,
-    netWeight: item.netWeight
-  }));
-  recalculate();
 }
 
 function addMenuItem() {
@@ -924,7 +1212,6 @@ function recalculate() {
 
   const tbody = document.getElementById('menuTableBody');
   tbody.innerHTML = '';
-
   const orderMap = {};
 
   menuItems.forEach(item => {
@@ -941,7 +1228,6 @@ function recalculate() {
     const fe = f.fe * r;
     const fiber = f.fiber * r;
 
-    // 廃棄率を加味した発注重量（グロスg）
     const grossWeight = f.waste >= 100 ? item.netWeight : item.netWeight / (1 - f.waste / 100);
     const cost = (grossWeight * f.price) / 100;
 
@@ -956,7 +1242,6 @@ function recalculate() {
     totGross += grossWeight;
     totCost += cost;
 
-    // 発注集計用合算
     if (!orderMap[f.id]) {
       orderMap[f.id] = { food: f, netTotal: 0, grossTotal: 0, costTotal: 0 };
     }
@@ -982,7 +1267,6 @@ function recalculate() {
     tbody.appendChild(tr);
   });
 
-  // KPI更新
   document.getElementById('kpiCost').textContent = `${totCost.toFixed(1)} 円`;
   const costDiff = budgetLimit - totCost;
   const kpiCostStatus = document.getElementById('kpiCostStatus');
@@ -1018,7 +1302,6 @@ function recalculate() {
   document.getElementById('kpiTotalCost').textContent = `${schoolTotalCost.toLocaleString()} 円`;
   document.getElementById('kpiGrossWeight').textContent = `総発注重量: ${schoolTotalKg.toFixed(1)} kg`;
 
-  // PFCバランス計算
   const pKcal = totProtein * 4;
   const fKcal = totFat * 9;
   const cKcal = totCarb * 4;
@@ -1050,7 +1333,6 @@ function recalculate() {
   pfcBadge.className = pfcOk ? 'badge badge-ok' : 'badge badge-warn';
   pfcBadge.textContent = pfcOk ? '適正バランス' : '要調整';
 
-  // 栄養素達成バー描画
   const barsData = [
     { name: 'エネルギー', val: totEnergy, target: std.energy, unit: 'kcal', type: 'range' },
     { name: '食塩相当量（上限）', val: totSalt, target: std.saltMax, unit: 'g', type: 'limit' },
@@ -1086,7 +1368,6 @@ function recalculate() {
     barsContainer.appendChild(div);
   });
 
-  // 全校発注集計テーブル描画
   renderOrderTable(orderMap, totalMeals, schoolTotalCost, schoolTotalKg);
   saveState();
 }
@@ -1125,7 +1406,6 @@ function renderOrderTable(orderMap, totalMeals, schoolTotalCost, schoolTotalKg) 
   `;
 }
 
-// 食材マスタ描画・編集
 function renderMasterTable() {
   const tbody = document.getElementById('masterTableBody');
   tbody.innerHTML = '';
@@ -1196,7 +1476,7 @@ function registerNewFood() {
 }
 
 function resetMasterData() {
-  if (confirm('食材マスタを初期状態に戻しますか？（独自追加した食材は削除されます）')) {
+  if (confirm('食材マスタを初期状態（100品目）に戻しますか？（独自追加した食材は削除されます）')) {
     foods = JSON.parse(JSON.stringify(DEFAULT_FOODS));
     populateFoodSelect();
     renderMasterTable();
@@ -1204,7 +1484,6 @@ function resetMasterData() {
   }
 }
 
-// Excel用CSV出力（BOM付きUTF-8）
 function exportCSV() {
   const title = document.getElementById('menuTitle').value;
   const date = document.getElementById('menuDate').value;
