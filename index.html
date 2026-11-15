@@ -1,0 +1,1261 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>小学校給食 献立作成・栄養価＆原価計算システム</title>
+<style>
+  :root {
+    --primary: #1b6b52;
+    --primary-light: #e8f5f0;
+    --primary-dark: #124a38;
+    --accent: #2b5b84;
+    --bg: #f4f7f6;
+    --card: #ffffff;
+    --text: #22292f;
+    --muted: #606f7b;
+    --border: #dce4e2;
+    --ok: #1e824c;
+    --ok-bg: #e6f7ed;
+    --warn: #c06c00;
+    --warn-bg: #fff5e6;
+    --danger: #c0392b;
+    --danger-bg: #fdecea;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", "Meiryo", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+    font-size: 14px;
+  }
+  header {
+    background: var(--primary);
+    color: #fff;
+    padding: 14px 20px;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+  }
+  header h1 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 700;
+  }
+  header p {
+    margin: 2px 0 0;
+    font-size: 12px;
+    opacity: 0.9;
+  }
+  .header-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  button {
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background: #fff;
+    color: var(--text);
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    transition: 0.15s;
+  }
+  button:hover { background: #eef3f2; }
+  button.btn-primary {
+    background: var(--primary);
+    color: #fff;
+    border-color: var(--primary);
+  }
+  button.btn-primary:hover { background: var(--primary-dark); }
+  button.btn-accent {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+  button.btn-accent:hover { opacity: 0.9; }
+  button.btn-danger {
+    color: var(--danger);
+    border-color: #f5c6cb;
+    background: #fff;
+    padding: 4px 8px;
+    font-size: 12px;
+  }
+  button.btn-danger:hover { background: var(--danger-bg); }
+  .header-actions button {
+    background: rgba(255,255,255,0.15);
+    color: #fff;
+    border-color: rgba(255,255,255,0.35);
+  }
+  .header-actions button:hover {
+    background: rgba(255,255,255,0.28);
+  }
+
+  .container {
+    max-width: 1360px;
+    margin: 0 auto;
+    padding: 16px;
+  }
+
+  .control-bar {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin-bottom: 16px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .control-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+  }
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+  .field label {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--muted);
+  }
+  input, select {
+    padding: 6px 8px;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    font-size: 13px;
+    background: #fff;
+  }
+  input[type="number"] { text-align: right; }
+
+  .tabs {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 14px;
+    border-bottom: 2px solid var(--border);
+    padding-bottom: 6px;
+  }
+  .tab-btn {
+    padding: 8px 16px;
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    font-size: 14px;
+    border-radius: 6px 6px 0 0;
+  }
+  .tab-btn.active {
+    background: var(--primary);
+    color: #fff;
+  }
+
+  .grid-main {
+    display: grid;
+    grid-template-columns: 1.45fr 1fr;
+    gap: 16px;
+    align-items: start;
+  }
+  @media (max-width: 1024px) {
+    .grid-main { grid-template-columns: 1fr; }
+  }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+  .card-title {
+    font-size: 15px;
+    font-weight: 700;
+    margin: 0 0 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  @media (max-width: 640px) {
+    .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+  .kpi-box {
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    padding: 10px;
+    background: #fafcfc;
+  }
+  .kpi-label {
+    font-size: 11px;
+    color: var(--muted);
+    font-weight: 700;
+  }
+  .kpi-val {
+    font-size: 20px;
+    font-weight: 700;
+    margin: 3px 0;
+  }
+  .kpi-sub {
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .badge {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 700;
+  }
+  .badge-ok { background: var(--ok-bg); color: var(--ok); }
+  .badge-warn { background: var(--warn-bg); color: var(--warn); }
+  .badge-danger { background: var(--danger-bg); color: var(--danger); }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  th, td {
+    padding: 7px 8px;
+    border-bottom: 1px solid var(--border);
+    text-align: left;
+  }
+  th {
+    background: var(--primary-light);
+    color: var(--primary-dark);
+    font-weight: 700;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+  td.num, th.num { text-align: right; }
+  tr:hover td { background: #f9fbfb; }
+
+  .add-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    background: var(--primary-light);
+    padding: 10px;
+    border-radius: 6px;
+    margin-bottom: 12px;
+    align-items: flex-end;
+  }
+
+  .bar-row {
+    margin-bottom: 10px;
+  }
+  .bar-header {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    margin-bottom: 3px;
+  }
+  .bar-track {
+    width: 100%;
+    height: 10px;
+    background: #e6ecea;
+    border-radius: 5px;
+    overflow: hidden;
+    position: relative;
+  }
+  .bar-fill {
+    height: 100%;
+    background: var(--primary);
+    border-radius: 5px;
+    transition: width 0.25s;
+  }
+  .bar-fill.warn { background: #e67e22; }
+  .bar-fill.danger { background: var(--danger); }
+
+  .pfc-bar {
+    display: flex;
+    height: 22px;
+    border-radius: 6px;
+    overflow: hidden;
+    margin: 8px 0;
+    font-size: 11px;
+    font-weight: 700;
+    color: #fff;
+  }
+  .pfc-p { background: #2e86c1; display: flex; align-items: center; justify-content: center; }
+  .pfc-f { background: #e67e22; display: flex; align-items: center; justify-content: center; }
+  .pfc-c { background: #27ae60; display: flex; align-items: center; justify-content: center; }
+
+  .hidden { display: none !important; }
+
+  @media print {
+    header .header-actions, .add-bar, .tabs, .no-print { display: none !important; }
+    body { background: #fff; font-size: 12px; }
+    .container { max-width: 100%; padding: 0; }
+    .card { border: 1px solid #999; box-shadow: none; break-inside: avoid; }
+    .grid-main { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>小学校給食 献立作成・栄養価＆原価計算システム</h1>
+    <p>文部科学省 学校給食摂取基準・日本食品標準成分表（八訂）増補2023年 準拠</p>
+  </div>
+  <div class="header-actions">
+    <button onclick="loadPreset('curry')">サンプル1: ポークカレー献立</button>
+    <button onclick="loadPreset('washoku')">サンプル2: 和食焼き魚献立</button>
+    <button onclick="loadPreset('iron')">サンプル3: 鉄・カルシウム強化献立</button>
+    <button onclick="exportCSV()">Excel用CSV出力</button>
+    <button onclick="window.print()">印刷 / PDF保存</button>
+  </div>
+</header>
+
+<div class="container">
+  <!-- 基本設定バー -->
+  <div class="control-bar">
+    <div class="control-group">
+      <div class="field">
+        <label>実施予定日</label>
+        <input type="date" id="menuDate" onchange="saveState()">
+      </div>
+      <div class="field">
+        <label>献立タイトル</label>
+        <input type="text" id="menuTitle" value="麦ごはん・ポークカレー・海藻サラダ・牛乳" style="width: 260px;" onchange="saveState()">
+      </div>
+      <div class="field">
+        <label>基準学年区分（文科省摂取基準）</label>
+        <select id="gradeSelect" onchange="recalculate()">
+          <option value="low">小学校 低学年（6〜7歳：530kcal / 塩分1.5g未満）</option>
+          <option value="mid" selected>小学校 中学年（8〜9歳：650kcal / 塩分2.0g未満）</option>
+          <option value="high">小学校 高学年（10〜11歳：780kcal / 塩分2.0g未満）</option>
+        </select>
+      </div>
+    </div>
+    <div class="control-group">
+      <div class="field">
+        <label>1食あたり材料予算上限（円）</label>
+        <input type="number" id="budgetLimit" value="300" min="50" max="2000" step="5" style="width: 100px;" onchange="recalculate()">
+      </div>
+      <div class="field">
+        <label>全校予定食数（食）</label>
+        <input type="number" id="totalMeals" value="450" min="1" max="5000" step="10" style="width: 100px;" onchange="recalculate()">
+      </div>
+    </div>
+  </div>
+
+  <!-- タブ切り替え -->
+  <div class="tabs no-print">
+    <button class="tab-btn active" id="tabBtnPlanner" onclick="switchTab('planner')">1. 献立作成・栄養＆原価計算</button>
+    <button class="tab-btn" id="tabBtnOrder" onclick="switchTab('order')">2. 全校発注集計表（kg・金額）</button>
+    <button class="tab-btn" id="tabBtnMaster" onclick="switchTab('master')">3. 食材マスタ編集・新規登録</button>
+  </div>
+
+  <!-- タブ1：献立作成メイン -->
+  <div id="tabPlanner">
+    <!-- サマリーKPI -->
+    <div class="kpi-grid">
+      <div class="kpi-box">
+        <div class="kpi-label">1人あたり材料原価（税込目安）</div>
+        <div class="kpi-val" id="kpiCost">0.0 円</div>
+        <div class="kpi-sub" id="kpiCostStatus">予算内</div>
+      </div>
+      <div class="kpi-box">
+        <div class="kpi-label">エネルギー（基準比）</div>
+        <div class="kpi-val" id="kpiEnergy">0 kcal</div>
+        <div class="kpi-sub" id="kpiEnergyStatus">基準 650 kcal</div>
+      </div>
+      <div class="kpi-box">
+        <div class="kpi-label">食塩相当量（塩分制限）</div>
+        <div class="kpi-val" id="kpiSalt">0.00 g</div>
+        <div class="kpi-sub" id="kpiSaltStatus">基準 2.0g未満</div>
+      </div>
+      <div class="kpi-box">
+        <div class="kpi-label">全校材料費合計（<span id="kpiMealsLabel">450</span>食分）</div>
+        <div class="kpi-val" id="kpiTotalCost">0 円</div>
+        <div class="kpi-sub" id="kpiGrossWeight">総発注重量: 0.0 kg</div>
+      </div>
+    </div>
+
+    <div class="grid-main">
+      <!-- 左側：献立明細テーブル -->
+      <div>
+        <div class="card">
+          <div class="card-title">
+            <span>献立使用食材リスト（1人あたり純使用量）</span>
+            <button class="btn-danger no-print" onclick="clearMenu()">献立をクリア</button>
+          </div>
+
+          <!-- 食材追加フォーム -->
+          <div class="add-bar no-print">
+            <div class="field">
+              <label>料理区分</label>
+              <select id="addDishType">
+                <option value="主食">主食</option>
+                <option value="主菜">主菜</option>
+                <option value="副菜">副菜</option>
+                <option value="汁物">汁物</option>
+                <option value="牛乳・デザート">牛乳・デザート</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>分類フィルタ</label>
+              <select id="addCatFilter" onchange="populateFoodSelect()">
+                <option value="ALL">すべて表示</option>
+                <option value="穀類">穀類</option>
+                <option value="いも類">いも類</option>
+                <option value="豆・種実">豆・種実</option>
+                <option value="野菜・きのこ・海藻">野菜・きのこ・海藻</option>
+                <option value="魚介類">魚介類</option>
+                <option value="肉類">肉類</option>
+                <option value="卵・乳類">卵・乳類</option>
+                <option value="油脂・調味料">油脂・調味料</option>
+              </select>
+            </div>
+            <div class="field" style="flex:1; min-width:170px;">
+              <label>食材名（八訂2023準拠）</label>
+              <select id="addFoodSelect"></select>
+            </div>
+            <div class="field">
+              <label>純使用量(g)</label>
+              <input type="number" id="addWeight" value="50" min="0.1" max="1000" step="0.5" style="width: 80px;">
+            </div>
+            <button class="btn-primary" onclick="addMenuItem()">＋ 追加</button>
+          </div>
+
+          <div style="overflow-x:auto;">
+            <table>
+              <thead>
+                <tr>
+                  <th>区分</th>
+                  <th>食材名</th>
+                  <th class="num">純使用(g)</th>
+                  <th class="num">廃棄率</th>
+                  <th class="num">発注量(g)</th>
+                  <th class="num">エネルギー</th>
+                  <th class="num">塩分(g)</th>
+                  <th class="num">原価(円)</th>
+                  <th class="no-print">操作</th>
+                </tr>
+              </thead>
+              <tbody id="menuTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- 右側：栄養価充足度＆PFCバランス -->
+      <div>
+        <div class="card">
+          <div class="card-title">
+            <span>3大栄養素（PFC）エネルギー比率</span>
+            <span id="pfcSummaryBadge" class="badge badge-ok">適正</span>
+          </div>
+          <div class="pfc-bar" id="pfcVisualBar">
+            <div class="pfc-p" style="width:16%">P 16%</div>
+            <div class="pfc-f" style="width:26%">F 26%</div>
+            <div class="pfc-c" style="width:58%">C 58%</div>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>栄養素</th>
+                <th class="num">摂取量</th>
+                <th class="num">熱量比率</th>
+                <th>文科省目標レンジ</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>たんぱく質 (P)</td>
+                <td class="num" id="valProtein">0.0 g</td>
+                <td class="num" id="ratioProtein">0.0 %</td>
+                <td>13 〜 20 %</td>
+              </tr>
+              <tr>
+                <td>脂質 (F)</td>
+                <td class="num" id="valFat">0.0 g</td>
+                <td class="num" id="ratioFat">0.0 %</td>
+                <td>20 〜 30 %</td>
+              </tr>
+              <tr>
+                <td>炭水化物 (C)</td>
+                <td class="num" id="valCarb">0.0 g</td>
+                <td class="num" id="ratioCarb">0.0 %</td>
+                <td>50 〜 67 %</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="card">
+          <div class="card-title">
+            <span>学校給食摂取基準 充足度チェック</span>
+          </div>
+          <div id="nutrientBars"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- タブ2：全校発注集計表 -->
+  <div id="tabOrder" class="hidden">
+    <div class="card">
+      <div class="card-title">
+        <span>食材別 全校発注集計表（予定食数：<span id="orderMealsCount">450</span>食）</span>
+        <button class="btn-accent" onclick="exportCSV()">発注集計CSVダウンロード</button>
+      </div>
+      <p style="font-size:12px; color:var(--muted); margin-top:0;">
+        同一食材が複数の料理（主菜と汁物など）に使用されている場合は自動的に合算され、廃棄率を加味した総発注重量（kg）を算出します。
+      </p>
+      <table>
+        <thead>
+          <tr>
+            <th>分類</th>
+            <th>食材名</th>
+            <th class="num">1人純使用(g)</th>
+            <th class="num">廃棄率(%)</th>
+            <th class="num">1人発注量(g)</th>
+            <th class="num">全校総発注量(kg)</th>
+            <th class="num">100g単価(円)</th>
+            <th class="num">全校材料費(円)</th>
+          </tr>
+        </thead>
+        <tbody id="orderTableBody"></tbody>
+        <tfoot id="orderTableFoot"></tfoot>
+      </table>
+    </div>
+  </div>
+
+  <!-- タブ3：食材マスタ編集 -->
+  <div id="tabMaster" class="hidden">
+    <div class="card">
+      <div class="card-title">
+        <span>新規食材の登録（地場産食材・独自加工品）</span>
+      </div>
+      <div class="add-bar">
+        <div class="field">
+          <label>分類</label>
+          <select id="newCat">
+            <option value="穀類">穀類</option>
+            <option value="いも類">いも類</option>
+            <option value="豆・種実">豆・種実</option>
+            <option value="野菜・きのこ・海藻">野菜・きのこ・海藻</option>
+            <option value="魚介類">魚介類</option>
+            <option value="肉類">肉類</option>
+            <option value="卵・乳類">卵・乳類</option>
+            <option value="油脂・調味料">油脂・調味料</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>食材名</label>
+          <input type="text" id="newName" placeholder="例：地元産小松菜">
+        </div>
+        <div class="field">
+          <label>熱量(kcal)</label>
+          <input type="number" id="newEnergy" value="20" step="1" style="width:70px;">
+        </div>
+        <div class="field">
+          <label>たんぱく質(g)</label>
+          <input type="number" id="newProtein" value="1.5" step="0.1" style="width:70px;">
+        </div>
+        <div class="field">
+          <label>脂質(g)</label>
+          <input type="number" id="newFat" value="0.2" step="0.1" style="width:70px;">
+        </div>
+        <div class="field">
+          <label>炭水化物(g)</label>
+          <input type="number" id="newCarb" value="3.0" step="0.1" style="width:70px;">
+        </div>
+        <div class="field">
+          <label>食塩(g)</label>
+          <input type="number" id="newSalt" value="0.0" step="0.01" style="width:70px;">
+        </div>
+        <div class="field">
+          <label>Ca(mg)</label>
+          <input type="number" id="newCa" value="150" step="1" style="width:65px;">
+        </div>
+        <div class="field">
+          <label>鉄(mg)</label>
+          <input type="number" id="newFe" value="2.0" step="0.1" style="width:65px;">
+        </div>
+        <div class="field">
+          <label>食物繊維(g)</label>
+          <input type="number" id="newFiber" value="2.0" step="0.1" style="width:65px;">
+        </div>
+        <div class="field">
+          <label>廃棄率(%)</label>
+          <input type="number" id="newWaste" value="10" step="1" style="width:65px;">
+        </div>
+        <div class="field">
+          <label>100g単価(円)</label>
+          <input type="number" id="newPrice" value="65" step="1" style="width:75px;">
+        </div>
+        <button class="btn-primary" onclick="registerNewFood()">マスタに登録</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">
+        <span>食材マスタ一覧（100gあたりの栄養成分・単価・廃棄率を直接編集可能）</span>
+        <button class="btn-danger" onclick="resetMasterData()">初期データに戻す</button>
+      </div>
+      <div style="overflow-x:auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>分類</th>
+              <th>食材名</th>
+              <th class="num">熱量(kcal)</th>
+              <th class="num">P(g)</th>
+              <th class="num">F(g)</th>
+              <th class="num">C(g)</th>
+              <th class="num">食塩(g)</th>
+              <th class="num">Ca(mg)</th>
+              <th class="num">鉄(mg)</th>
+              <th class="num">繊維(g)</th>
+              <th class="num">廃棄率(%)</th>
+              <th class="num">100g単価(円)</th>
+            </tr>
+          </thead>
+          <tbody id="masterTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// 文部科学省 学校給食摂取基準（現行基準）
+const STANDARDS = {
+  low:  { label: '小学校 低学年（6〜7歳）', energy: 530, pMin: 13, pMax: 20, fMin: 20, fMax: 30, cMin: 50, cMax: 67, saltMax: 1.5, ca: 290, fe: 2.0, fiber: 4.5 },
+  mid:  { label: '小学校 中学年（8〜9歳）', energy: 650, pMin: 13, pMax: 20, fMin: 20, fMax: 30, cMin: 50, cMax: 67, saltMax: 2.0, ca: 350, fe: 3.0, fiber: 5.0 },
+  high: { label: '小学校 高学年（10〜11歳）', energy: 780, pMin: 13, pMax: 20, fMin: 20, fMax: 30, cMin: 50, cMax: 67, saltMax: 2.0, ca: 450, fe: 4.0, fiber: 6.0 }
+};
+
+// 日本食品標準成分表（八訂）増補2023年 準拠 初期食材マスタ（100gあたり）
+const DEFAULT_FOODS = [
+  { id: 'f01', cat: '穀類', name: '精白米（水稲めし換算前・乾）', energy: 342, protein: 6.1, fat: 0.9, carb: 77.6, salt: 0.0, ca: 5, fe: 0.8, fiber: 0.5, waste: 0, price: 42 },
+  { id: 'f02', cat: '穀類', name: '押し麦（大麦・乾）', energy: 332, protein: 6.2, fat: 1.3, carb: 77.8, salt: 0.0, ca: 17, fe: 1.1, fiber: 9.6, waste: 0, price: 38 },
+  { id: 'f03', cat: '穀類', name: '食パン（給食用コッペパン含む）', energy: 248, protein: 8.9, fat: 4.1, carb: 46.4, salt: 1.2, ca: 27, fe: 0.6, fiber: 4.2, waste: 0, price: 55 },
+  { id: 'f04', cat: '穀類', name: 'ソフトめん（ゆでスパゲッティ）', energy: 150, protein: 5.4, fat: 0.9, carb: 30.8, salt: 0.3, ca: 11, fe: 0.5, fiber: 1.5, waste: 0, price: 35 },
+  { id: 'f05', cat: '穀類', name: '中華めん（ゆで）', energy: 133, protein: 4.5, fat: 0.6, carb: 27.9, salt: 0.3, ca: 8, fe: 0.4, fiber: 1.3, waste: 0, price: 36 },
+  { id: 'f06', cat: '穀類', name: '薄力粉（小麦粉）', energy: 349, protein: 8.3, fat: 1.5, carb: 75.8, salt: 0.0, ca: 17, fe: 0.6, fiber: 2.5, waste: 0, price: 28 },
+  { id: 'f07', cat: 'いも類', name: 'じゃがいも（塊茎・生）', energy: 59, protein: 1.8, fat: 0.1, carb: 17.3, salt: 0.0, ca: 4, fe: 0.4, fiber: 1.3, waste: 10, price: 26 },
+  { id: 'f08', cat: 'いも類', name: 'さつまいも（塊根・生）', energy: 126, protein: 1.2, fat: 0.2, carb: 31.9, salt: 0.0, ca: 36, fe: 0.6, fiber: 2.2, waste: 10, price: 35 },
+  { id: 'f09', cat: 'いも類', name: 'さといも（球茎・生）', energy: 53, protein: 1.5, fat: 0.1, carb: 13.1, salt: 0.0, ca: 16, fe: 0.5, fiber: 2.3, waste: 15, price: 45 },
+  { id: 'f10', cat: 'いも類', name: 'じゃがいもでんぷん（片栗粉）', energy: 332, protein: 0.1, fat: 0.1, carb: 82.8, salt: 0.0, ca: 16, fe: 0.2, fiber: 0.0, waste: 0, price: 32 },
+  { id: 'f11', cat: '豆・種実', name: '木綿豆腐', energy: 73, protein: 7.0, fat: 4.9, carb: 1.5, salt: 0.0, ca: 93, fe: 1.5, fiber: 1.1, waste: 0, price: 25 },
+  { id: 'f12', cat: '豆・種実', name: '油揚げ', energy: 377, protein: 23.4, fat: 34.4, carb: 0.4, salt: 0.0, ca: 310, fe: 4.2, fiber: 1.1, waste: 0, price: 85 },
+  { id: 'f13', cat: '豆・種実', name: '納豆（糸引き）', energy: 184, protein: 16.5, fat: 10.0, carb: 12.1, salt: 0.0, ca: 90, fe: 3.3, fiber: 6.7, waste: 0, price: 75 },
+  { id: 'f14', cat: '豆・種実', name: 'いりごま（白・黒）', energy: 605, protein: 20.3, fat: 54.2, carb: 18.5, salt: 0.0, ca: 1200, fe: 9.9, fiber: 12.6, waste: 0, price: 110 },
+  { id: 'f15', cat: '野菜・きのこ・海藻', name: 'たまねぎ（鱗茎・生）', energy: 33, protein: 1.0, fat: 0.1, carb: 8.4, salt: 0.0, ca: 17, fe: 0.2, fiber: 1.5, waste: 6, price: 22 },
+  { id: 'f16', cat: '野菜・きのこ・海藻', name: 'にんじん（根・皮むき生）', energy: 35, protein: 0.7, fat: 0.2, carb: 9.3, salt: 0.0, ca: 28, fe: 0.2, fiber: 2.8, waste: 3, price: 28 },
+  { id: 'f17', cat: '野菜・きのこ・海藻', name: 'キャベツ（結球葉・生）', energy: 21, protein: 1.3, fat: 0.2, carb: 5.2, salt: 0.0, ca: 43, fe: 0.3, fiber: 1.8, waste: 15, price: 20 },
+  { id: 'f18', cat: '野菜・きのこ・海藻', name: 'はくさい（結球葉・生）', energy: 13, protein: 0.8, fat: 0.1, carb: 3.2, salt: 0.0, ca: 43, fe: 0.3, fiber: 1.3, waste: 10, price: 18 },
+  { id: 'f19', cat: '野菜・きのこ・海藻', name: 'こまつな（葉・生）', energy: 13, protein: 1.5, fat: 0.2, carb: 2.4, salt: 0.0, ca: 170, fe: 2.8, fiber: 1.9, waste: 10, price: 52 },
+  { id: 'f20', cat: '野菜・きのこ・海藻', name: 'ほうれんそう（葉・通年生）', energy: 18, protein: 2.2, fat: 0.4, carb: 3.1, salt: 0.0, ca: 49, fe: 2.0, fiber: 2.8, waste: 10, price: 65 },
+  { id: 'f21', cat: '野菜・きのこ・海藻', name: 'もやし（緑豆・生）', energy: 15, protein: 1.7, fat: 0.1, carb: 2.6, salt: 0.0, ca: 13, fe: 0.4, fiber: 1.3, waste: 0, price: 16 },
+  { id: 'f22', cat: '野菜・きのこ・海藻', name: 'きゅうり（果実・生）', energy: 13, protein: 1.0, fat: 0.1, carb: 3.0, salt: 0.0, ca: 26, fe: 0.3, fiber: 1.1, waste: 2, price: 42 },
+  { id: 'f23', cat: '野菜・きのこ・海藻', name: 'だいこん（根・皮むき生）', energy: 15, protein: 0.4, fat: 0.1, carb: 4.1, salt: 0.0, ca: 23, fe: 0.2, fiber: 1.3, waste: 10, price: 18 },
+  { id: 'f24', cat: '野菜・きのこ・海藻', name: 'ごぼう（根・生）', energy: 58, protein: 1.8, fat: 0.1, carb: 15.4, salt: 0.0, ca: 46, fe: 0.7, fiber: 5.7, waste: 12, price: 58 },
+  { id: 'f25', cat: '野菜・きのこ・海藻', name: 'ブロッコリー（花序・生）', energy: 37, protein: 5.4, fat: 0.6, carb: 6.6, salt: 0.0, ca: 50, fe: 1.3, fiber: 5.1, waste: 50, price: 68 },
+  { id: 'f26', cat: '野菜・きのこ・海藻', name: 'スイートコーン（ホールカーネル缶）', energy: 84, protein: 2.8, fat: 1.4, carb: 17.6, salt: 0.6, ca: 3, fe: 0.5, fiber: 2.5, waste: 0, price: 54 },
+  { id: 'f27', cat: '野菜・きのこ・海藻', name: 'ぶなしめじ（生）', energy: 22, protein: 2.7, fat: 0.5, carb: 4.8, salt: 0.0, ca: 2, fe: 0.4, fiber: 3.0, waste: 10, price: 62 },
+  { id: 'f28', cat: '野菜・きのこ・海藻', name: 'カットわかめ（乾燥・水戻し前）', energy: 138, protein: 18.0, fat: 4.0, carb: 41.8, salt: 24.0, ca: 820, fe: 6.1, fiber: 35.6, waste: 0, price: 280 },
+  { id: 'f29', cat: '野菜・きのこ・海藻', name: 'ひじき（干し・鉄釜）', energy: 149, protein: 9.2, fat: 3.2, carb: 58.4, salt: 4.7, ca: 1000, fe: 58.2, fiber: 51.8, waste: 0, price: 320 },
+  { id: 'f30', cat: '魚介類', name: 'しろさけ（切り身・生）', energy: 124, protein: 22.3, fat: 4.1, carb: 0.1, salt: 0.1, ca: 10, fe: 0.5, fiber: 0.0, waste: 0, price: 145 },
+  { id: 'f31', cat: '魚介類', name: 'まさば（切り身・生）', energy: 211, protein: 20.6, fat: 16.8, carb: 0.3, salt: 0.2, ca: 6, fe: 1.2, fiber: 0.0, waste: 0, price: 115 },
+  { id: 'f32', cat: '魚介類', name: 'あじ（切り身・生）', energy: 112, protein: 19.7, fat: 4.5, carb: 0.1, salt: 0.2, ca: 65, fe: 0.7, fiber: 0.0, waste: 0, price: 125 },
+  { id: 'f33', cat: '魚介類', name: 'しらす干し（微乾燥）', energy: 113, protein: 23.1, fat: 1.8, carb: 0.3, salt: 4.1, ca: 210, fe: 0.8, fiber: 0.0, waste: 0, price: 210 },
+  { id: 'f34', cat: '魚介類', name: 'ツナ缶（まぐろ油漬け・フレーク）', energy: 267, protein: 17.7, fat: 21.7, carb: 0.1, salt: 0.8, ca: 7, fe: 0.5, fiber: 0.0, waste: 0, price: 128 },
+  { id: 'f35', cat: '魚介類', name: 'ちくわ（焼きちくわ）', energy: 119, protein: 12.2, fat: 2.0, carb: 13.5, salt: 2.1, ca: 35, fe: 0.4, fiber: 0.0, waste: 0, price: 68 },
+  { id: 'f36', cat: '肉類', name: '豚肉（もも・赤肉・生）', energy: 128, protein: 22.1, fat: 4.3, carb: 0.2, salt: 0.1, ca: 4, fe: 0.9, fiber: 0.0, waste: 0, price: 118 },
+  { id: 'f37', cat: '肉類', name: '豚肉（こま切れ・肩ロース混）', energy: 216, protein: 18.5, fat: 15.1, carb: 0.1, salt: 0.1, ca: 4, fe: 0.8, fiber: 0.0, waste: 0, price: 112 },
+  { id: 'f38', cat: '肉類', name: '鶏肉（むね・皮なし・生）', energy: 105, protein: 23.3, fat: 1.9, carb: 0.1, salt: 0.1, ca: 4, fe: 0.3, fiber: 0.0, waste: 0, price: 82 },
+  { id: 'f39', cat: '肉類', name: '鶏肉（もも・皮つき・生）', energy: 190, protein: 16.6, fat: 14.2, carb: 0.0, salt: 0.1, ca: 6, fe: 0.6, fiber: 0.0, waste: 0, price: 98 },
+  { id: 'f40', cat: '肉類', name: '豚ひき肉（生）', energy: 236, protein: 17.7, fat: 17.2, carb: 0.1, salt: 0.1, ca: 5, fe: 0.9, fiber: 0.0, waste: 0, price: 96 },
+  { id: 'f41', cat: '肉類', name: '豚レバー（生）', energy: 114, protein: 20.4, fat: 3.4, carb: 2.5, salt: 0.2, ca: 5, fe: 13.0, fiber: 0.0, waste: 0, price: 88 },
+  { id: 'f42', cat: '卵・乳類', name: '給食用牛乳（普通牛乳 200ml=206g）', energy: 61, protein: 3.3, fat: 3.8, carb: 4.8, salt: 0.1, ca: 110, fe: 0.02, fiber: 0.0, waste: 0, price: 28 },
+  { id: 'f43', cat: '卵・乳類', name: '鶏卵（全卵・生）', energy: 142, protein: 12.2, fat: 10.2, carb: 0.4, salt: 0.4, ca: 46, fe: 1.5, fiber: 0.0, waste: 15, price: 45 },
+  { id: 'f44', cat: '卵・乳類', name: 'プロセスチーズ（給食小袋）', energy: 313, protein: 22.7, fat: 26.0, carb: 1.3, salt: 2.8, ca: 630, fe: 0.3, fiber: 0.0, waste: 0, price: 155 },
+  { id: 'f45', cat: '卵・乳類', name: 'ヨーグルト（全脂無糖）', energy: 56, protein: 3.6, fat: 3.0, carb: 4.9, salt: 0.1, ca: 120, fe: 0.1, fiber: 0.0, waste: 0, price: 44 },
+  { id: 'f46', cat: '油脂・調味料', name: 'サラダ油（調合植物油）', energy: 884, protein: 0.0, fat: 100.0, carb: 0.0, salt: 0.0, ca: 0, fe: 0.0, fiber: 0.0, waste: 0, price: 45 },
+  { id: 'f47', cat: '油脂・調味料', name: 'ごま油', energy: 884, protein: 0.0, fat: 100.0, carb: 0.0, salt: 0.0, ca: 0, fe: 0.0, fiber: 0.0, waste: 0, price: 95 },
+  { id: 'f48', cat: '油脂・調味料', name: 'バター（有塩）', energy: 700, protein: 0.6, fat: 81.0, carb: 0.2, salt: 1.9, ca: 15, fe: 0.0, fiber: 0.0, waste: 0, price: 165 },
+  { id: 'f49', cat: '油脂・調味料', name: '濃口しょうゆ', energy: 73, protein: 7.7, fat: 0.0, carb: 7.9, salt: 14.5, ca: 22, fe: 1.7, fiber: 0.0, waste: 0, price: 32 },
+  { id: 'f50', cat: '油脂・調味料', name: '米みそ（淡色辛みそ）', energy: 192, protein: 12.5, fat: 6.0, carb: 21.9, salt: 12.4, ca: 80, fe: 4.0, fiber: 4.9, waste: 0, price: 48 },
+  { id: 'f51', cat: '油脂・調味料', name: '食塩（精製塩）', energy: 0, protein: 0.0, fat: 0.0, carb: 0.0, salt: 99.5, ca: 0, fe: 0.0, fiber: 0.0, waste: 0, price: 15 },
+  { id: 'f52', cat: '油脂・調味料', name: '上白糖', energy: 391, protein: 0.0, fat: 0.0, carb: 99.3, salt: 0.0, ca: 1, fe: 0.0, fiber: 0.0, waste: 0, price: 26 },
+  { id: 'f53', cat: '油脂・調味料', name: '穀物酢', energy: 24, protein: 0.1, fat: 0.0, carb: 2.4, salt: 0.0, ca: 2, fe: 0.2, fiber: 0.0, waste: 0, price: 28 },
+  { id: 'f54', cat: '油脂・調味料', name: 'トマトケチャップ', energy: 107, protein: 1.6, fat: 0.1, carb: 26.6, salt: 3.3, ca: 16, fe: 0.7, fiber: 1.4, waste: 0, price: 44 },
+  { id: 'f55', cat: '油脂・調味料', name: '中濃ソース', energy: 128, protein: 0.7, fat: 0.2, carb: 31.1, salt: 5.7, ca: 17, fe: 0.9, fiber: 0.8, waste: 0, price: 42 },
+  { id: 'f56', cat: '油脂・調味料', name: 'カレールウ（給食用フレーク）', energy: 492, protein: 7.4, fat: 32.8, carb: 44.5, salt: 10.2, ca: 45, fe: 3.2, fiber: 4.2, waste: 0, price: 98 },
+  { id: 'f57', cat: '油脂・調味料', name: 'マヨネーズ（全卵型）', energy: 669, protein: 1.5, fat: 76.0, carb: 1.7, salt: 1.9, ca: 9, fe: 0.3, fiber: 0.0, waste: 0, price: 65 }
+];
+
+// サンプル献立プリセット
+const PRESETS = {
+  curry: {
+    title: '麦ごはん・ポークカレー・海藻サラダ・牛乳',
+    grade: 'mid',
+    items: [
+      { dishType: '主食', foodId: 'f01', netWeight: 70 },
+      { dishType: '主食', foodId: 'f02', netWeight: 10 },
+      { dishType: '主菜', foodId: 'f36', netWeight: 45 },
+      { dishType: '主菜', foodId: 'f15', netWeight: 50 },
+      { dishType: '主菜', foodId: 'f16', netWeight: 25 },
+      { dishType: '主菜', foodId: 'f07', netWeight: 40 },
+      { dishType: '主菜', foodId: 'f46', netWeight: 3 },
+      { dishType: '主菜', foodId: 'f56', netWeight: 13 },
+      { dishType: '副菜', foodId: 'f17', netWeight: 35 },
+      { dishType: '副菜', foodId: 'f22', netWeight: 15 },
+      { dishType: '副菜', foodId: 'f28', netWeight: 1.5 },
+      { dishType: '副菜', foodId: 'f49', netWeight: 2.0 },
+      { dishType: '副菜', foodId: 'f53', netWeight: 3.0 },
+      { dishType: '副菜', foodId: 'f52', netWeight: 1.5 },
+      { dishType: '牛乳・デザート', foodId: 'f42', netWeight: 206 }
+    ]
+  },
+  washoku: {
+    title: 'ごはん・さばの味噌煮・小松菜のごま和え・けんちん汁・牛乳',
+    grade: 'mid',
+    items: [
+      { dishType: '主食', foodId: 'f01', netWeight: 80 },
+      { dishType: '主菜', foodId: 'f31', netWeight: 55 },
+      { dishType: '主菜', foodId: 'f50', netWeight: 6 },
+      { dishType: '主菜', foodId: 'f52', netWeight: 4 },
+      { dishType: '副菜', foodId: 'f19', netWeight: 40 },
+      { dishType: '副菜', foodId: 'f21', netWeight: 20 },
+      { dishType: '副菜', foodId: 'f14', netWeight: 3 },
+      { dishType: '副菜', foodId: 'f49', netWeight: 2.5 },
+      { dishType: '汁物', foodId: 'f11', netWeight: 25 },
+      { dishType: '汁物', foodId: 'f23', netWeight: 25 },
+      { dishType: '汁物', foodId: 'f16', netWeight: 15 },
+      { dishType: '汁物', foodId: 'f24', netWeight: 10 },
+      { dishType: '汁物', foodId: 'f47', netWeight: 1 },
+      { dishType: '汁物', foodId: 'f49', netWeight: 3.5 },
+      { dishType: '牛乳・デザート', foodId: 'f42', netWeight: 206 }
+    ]
+  },
+  iron: {
+    title: 'ごはん・レバニラ炒め・ひじきと大豆の煮物・みそ汁・牛乳',
+    grade: 'high',
+    items: [
+      { dishType: '主食', foodId: 'f01', netWeight: 95 },
+      { dishType: '主菜', foodId: 'f41', netWeight: 30 },
+      { dishType: '主菜', foodId: 'f37', netWeight: 25 },
+      { dishType: '主菜', foodId: 'f21', netWeight: 45 },
+      { dishType: '主菜', foodId: 'f16', netWeight: 15 },
+      { dishType: '主菜', foodId: 'f46', netWeight: 4 },
+      { dishType: '主菜', foodId: 'f49', netWeight: 4 },
+      { dishType: '副菜', foodId: 'f29', netWeight: 3 },
+      { dishType: '副菜', foodId: 'f12', netWeight: 8 },
+      { dishType: '副菜', foodId: 'f26', netWeight: 15 },
+      { dishType: '副菜', foodId: 'f49', netWeight: 2.5 },
+      { dishType: '副菜', foodId: 'f52', netWeight: 2.5 },
+      { dishType: '汁物', foodId: 'f07', netWeight: 30 },
+      { dishType: '汁物', foodId: 'f15', netWeight: 20 },
+      { dishType: '汁物', foodId: 'f50', netWeight: 8 },
+      { dishType: '牛乳・デザート', foodId: 'f42', netWeight: 206 }
+    ]
+  }
+};
+
+let foods = [];
+let menuItems = [];
+
+// 安全なストレージ読み書き（ローカルファイルや制限環境でもエラーを出さない）
+function safeLoad(key, fallback) {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : fallback;
+  } catch (e) {
+    return fallback;
+  }
+}
+
+function safeSave(key, data) {
+  try {
+    localStorage.setItem(key, JSON.stringify(data));
+  } catch (e) {
+    // ストレージ無効環境でも無視して継続
+  }
+}
+
+function init() {
+  foods = safeLoad('school_lunch_foods_v2', JSON.parse(JSON.stringify(DEFAULT_FOODS)));
+  const savedMenu = safeLoad('school_lunch_menu_v2', null);
+
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('menuDate').value = today;
+
+  populateFoodSelect();
+  renderMasterTable();
+
+  if (savedMenu && savedMenu.items && savedMenu.items.length > 0) {
+    document.getElementById('menuTitle').value = savedMenu.title || '';
+    document.getElementById('gradeSelect').value = savedMenu.grade || 'mid';
+    document.getElementById('budgetLimit').value = savedMenu.budgetLimit || 300;
+    document.getElementById('totalMeals').value = savedMenu.totalMeals || 450;
+    menuItems = savedMenu.items;
+    recalculate();
+  } else {
+    loadPreset('curry');
+  }
+}
+
+function saveState() {
+  safeSave('school_lunch_foods_v2', foods);
+  safeSave('school_lunch_menu_v2', {
+    title: document.getElementById('menuTitle').value,
+    grade: document.getElementById('gradeSelect').value,
+    budgetLimit: Number(document.getElementById('budgetLimit').value),
+    totalMeals: Number(document.getElementById('totalMeals').value),
+    items: menuItems
+  });
+}
+
+function switchTab(tab) {
+  document.getElementById('tabPlanner').classList.toggle('hidden', tab !== 'planner');
+  document.getElementById('tabOrder').classList.toggle('hidden', tab !== 'order');
+  document.getElementById('tabMaster').classList.toggle('hidden', tab !== 'master');
+
+  document.getElementById('tabBtnPlanner').classList.toggle('active', tab === 'planner');
+  document.getElementById('tabBtnOrder').classList.toggle('active', tab === 'order');
+  document.getElementById('tabBtnMaster').classList.toggle('active', tab === 'master');
+}
+
+function populateFoodSelect() {
+  const cat = document.getElementById('addCatFilter').value;
+  const sel = document.getElementById('addFoodSelect');
+  sel.innerHTML = '';
+  foods
+    .filter(f => cat === 'ALL' || f.cat === cat)
+    .forEach(f => {
+      const opt = document.createElement('option');
+      opt.value = f.id;
+      opt.textContent = `${f.name}（${f.price}円/100g・廃棄${f.waste}%）`;
+      sel.appendChild(opt);
+    });
+}
+
+function loadPreset(key) {
+  const p = PRESETS[key];
+  if (!p) return;
+  document.getElementById('menuTitle').value = p.title;
+  document.getElementById('gradeSelect').value = p.grade;
+  menuItems = p.items.map((item, idx) => ({
+    uid: 'm_' + Date.now() + '_' + idx,
+    dishType: item.dishType,
+    foodId: item.foodId,
+    netWeight: item.netWeight
+  }));
+  recalculate();
+}
+
+function addMenuItem() {
+  const dishType = document.getElementById('addDishType').value;
+  const foodId = document.getElementById('addFoodSelect').value;
+  const netWeight = parseFloat(document.getElementById('addWeight').value);
+  if (!foodId || isNaN(netWeight) || netWeight <= 0) {
+    alert('食材と正しい純使用量（g）を入力してください。');
+    return;
+  }
+  menuItems.push({
+    uid: 'm_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+    dishType,
+    foodId,
+    netWeight
+  });
+  recalculate();
+}
+
+function updateItemWeight(uid, newVal) {
+  const w = parseFloat(newVal);
+  if (isNaN(w) || w < 0) return;
+  const target = menuItems.find(m => m.uid === uid);
+  if (target) {
+    target.netWeight = w;
+    recalculate();
+  }
+}
+
+function removeMenuItem(uid) {
+  menuItems = menuItems.filter(m => m.uid !== uid);
+  recalculate();
+}
+
+function clearMenu() {
+  if (confirm('現在の献立リストをすべてクリアしますか？')) {
+    menuItems = [];
+    recalculate();
+  }
+}
+
+function getFoodById(id) {
+  return foods.find(f => f.id === id);
+}
+
+function recalculate() {
+  const gradeKey = document.getElementById('gradeSelect').value;
+  const std = STANDARDS[gradeKey];
+  const budgetLimit = Number(document.getElementById('budgetLimit').value) || 300;
+  const totalMeals = Number(document.getElementById('totalMeals').value) || 450;
+
+  let totEnergy = 0, totProtein = 0, totFat = 0, totCarb = 0;
+  let totSalt = 0, totCa = 0, totFe = 0, totFiber = 0;
+  let totGross = 0, totCost = 0;
+
+  const tbody = document.getElementById('menuTableBody');
+  tbody.innerHTML = '';
+
+  const orderMap = {};
+
+  menuItems.forEach(item => {
+    const f = getFoodById(item.foodId);
+    if (!f) return;
+
+    const r = item.netWeight / 100;
+    const energy = f.energy * r;
+    const protein = f.protein * r;
+    const fat = f.fat * r;
+    const carb = f.carb * r;
+    const salt = f.salt * r;
+    const ca = f.ca * r;
+    const fe = f.fe * r;
+    const fiber = f.fiber * r;
+
+    // 廃棄率を加味した発注重量（グロスg）
+    const grossWeight = f.waste >= 100 ? item.netWeight : item.netWeight / (1 - f.waste / 100);
+    const cost = (grossWeight * f.price) / 100;
+
+    totEnergy += energy;
+    totProtein += protein;
+    totFat += fat;
+    totCarb += carb;
+    totSalt += salt;
+    totCa += ca;
+    totFe += fe;
+    totFiber += fiber;
+    totGross += grossWeight;
+    totCost += cost;
+
+    // 発注集計用合算
+    if (!orderMap[f.id]) {
+      orderMap[f.id] = { food: f, netTotal: 0, grossTotal: 0, costTotal: 0 };
+    }
+    orderMap[f.id].netTotal += item.netWeight;
+    orderMap[f.id].grossTotal += grossWeight;
+    orderMap[f.id].costTotal += cost;
+
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><span class="badge" style="background:#eef3f2;color:#333;">${item.dishType}</span></td>
+      <td>${f.name}</td>
+      <td class="num">
+        <input type="number" value="${item.netWeight}" min="0" step="0.5" style="width:68px; padding:3px 5px;"
+          onchange="updateItemWeight('${item.uid}', this.value)">
+      </td>
+      <td class="num">${f.waste}%</td>
+      <td class="num">${grossWeight.toFixed(1)}</td>
+      <td class="num">${energy.toFixed(0)} kcal</td>
+      <td class="num">${salt.toFixed(2)}</td>
+      <td class="num">${cost.toFixed(1)} 円</td>
+      <td class="no-print"><button class="btn-danger" onclick="removeMenuItem('${item.uid}')">削除</button></td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  // KPI更新
+  document.getElementById('kpiCost').textContent = `${totCost.toFixed(1)} 円`;
+  const costDiff = budgetLimit - totCost;
+  const kpiCostStatus = document.getElementById('kpiCostStatus');
+  if (costDiff >= 0) {
+    kpiCostStatus.innerHTML = `<span class="badge badge-ok">予算内（残 ${costDiff.toFixed(1)}円）</span>`;
+  } else {
+    kpiCostStatus.innerHTML = `<span class="badge badge-danger">予算超過（+${Math.abs(costDiff).toFixed(1)}円）</span>`;
+  }
+
+  document.getElementById('kpiEnergy').textContent = `${Math.round(totEnergy)} kcal`;
+  const energyRate = (totEnergy / std.energy) * 100;
+  const kpiEnergyStatus = document.getElementById('kpiEnergyStatus');
+  if (energyRate >= 90 && energyRate <= 110) {
+    kpiEnergyStatus.innerHTML = `<span class="badge badge-ok">基準達成 ${energyRate.toFixed(0)}%</span>`;
+  } else if (energyRate < 90) {
+    kpiEnergyStatus.innerHTML = `<span class="badge badge-warn">やや不足 ${energyRate.toFixed(0)}%</span>`;
+  } else {
+    kpiEnergyStatus.innerHTML = `<span class="badge badge-danger">過多 ${energyRate.toFixed(0)}%</span>`;
+  }
+
+  document.getElementById('kpiSalt').textContent = `${totSalt.toFixed(2)} g`;
+  const kpiSaltStatus = document.getElementById('kpiSaltStatus');
+  if (totSalt < std.saltMax) {
+    kpiSaltStatus.innerHTML = `<span class="badge badge-ok">基準クリア（${std.saltMax}g未満）</span>`;
+  } else {
+    kpiSaltStatus.innerHTML = `<span class="badge badge-danger">塩分超過（+${(totSalt - std.saltMax).toFixed(2)}g）</span>`;
+  }
+
+  document.getElementById('kpiMealsLabel').textContent = totalMeals;
+  document.getElementById('orderMealsCount').textContent = totalMeals;
+  const schoolTotalCost = Math.round(totCost * totalMeals);
+  const schoolTotalKg = (totGross * totalMeals) / 1000;
+  document.getElementById('kpiTotalCost').textContent = `${schoolTotalCost.toLocaleString()} 円`;
+  document.getElementById('kpiGrossWeight').textContent = `総発注重量: ${schoolTotalKg.toFixed(1)} kg`;
+
+  // PFCバランス計算
+  const pKcal = totProtein * 4;
+  const fKcal = totFat * 9;
+  const cKcal = totCarb * 4;
+  const pfcSum = pKcal + fKcal + cKcal;
+
+  const pPct = pfcSum > 0 ? (pKcal / pfcSum) * 100 : 0;
+  const fPct = pfcSum > 0 ? (fKcal / pfcSum) * 100 : 0;
+  const cPct = pfcSum > 0 ? (cKcal / pfcSum) * 100 : 0;
+
+  document.getElementById('valProtein').textContent = `${totProtein.toFixed(1)} g`;
+  document.getElementById('valFat').textContent = `${totFat.toFixed(1)} g`;
+  document.getElementById('valCarb').textContent = `${totCarb.toFixed(1)} g`;
+
+  document.getElementById('ratioProtein').textContent = `${pPct.toFixed(1)} %`;
+  document.getElementById('ratioFat').textContent = `${fPct.toFixed(1)} %`;
+  document.getElementById('ratioCarb').textContent = `${cPct.toFixed(1)} %`;
+
+  const bar = document.getElementById('pfcVisualBar');
+  if (pfcSum > 0) {
+    bar.innerHTML = `
+      <div class="pfc-p" style="width:${pPct}%">P ${pPct.toFixed(0)}%</div>
+      <div class="pfc-f" style="width:${fPct}%">F ${fPct.toFixed(0)}%</div>
+      <div class="pfc-c" style="width:${cPct}%">C ${cPct.toFixed(0)}%</div>
+    `;
+  }
+
+  const pfcOk = (pPct >= std.pMin && pPct <= std.pMax) && (fPct >= std.fMin && fPct <= std.fMax) && (cPct >= std.cMin && cPct <= std.cMax);
+  const pfcBadge = document.getElementById('pfcSummaryBadge');
+  pfcBadge.className = pfcOk ? 'badge badge-ok' : 'badge badge-warn';
+  pfcBadge.textContent = pfcOk ? '適正バランス' : '要調整';
+
+  // 栄養素達成バー描画
+  const barsData = [
+    { name: 'エネルギー', val: totEnergy, target: std.energy, unit: 'kcal', type: 'range' },
+    { name: '食塩相当量（上限）', val: totSalt, target: std.saltMax, unit: 'g', type: 'limit' },
+    { name: 'カルシウム', val: totCa, target: std.ca, unit: 'mg', type: 'min' },
+    { name: '鉄', val: totFe, target: std.fe, unit: 'mg', type: 'min' },
+    { name: '食物繊維', val: totFiber, target: std.fiber, unit: 'g', type: 'min' }
+  ];
+
+  const barsContainer = document.getElementById('nutrientBars');
+  barsContainer.innerHTML = '';
+  barsData.forEach(b => {
+    const pct = b.target > 0 ? (b.val / b.target) * 100 : 0;
+    const widthPct = Math.min(100, pct);
+    let fillClass = '';
+    if (b.type === 'limit') {
+      fillClass = b.val >= b.target ? 'danger' : (pct > 85 ? 'warn' : '');
+    } else if (b.type === 'min') {
+      fillClass = pct < 80 ? 'warn' : '';
+    } else {
+      fillClass = (pct < 85 || pct > 115) ? 'warn' : '';
+    }
+    const div = document.createElement('div');
+    div.className = 'bar-row';
+    div.innerHTML = `
+      <div class="bar-header">
+        <span><strong>${b.name}</strong>：${b.val.toFixed(b.unit === 'kcal' ? 0 : 1)} ${b.unit} / 基準 ${b.target} ${b.unit}</span>
+        <span>${pct.toFixed(0)}%</span>
+      </div>
+      <div class="bar-track">
+        <div class="bar-fill ${fillClass}" style="width:${widthPct}%"></div>
+      </div>
+    `;
+    barsContainer.appendChild(div);
+  });
+
+  // 全校発注集計テーブル描画
+  renderOrderTable(orderMap, totalMeals, schoolTotalCost, schoolTotalKg);
+  saveState();
+}
+
+function renderOrderTable(orderMap, totalMeals, schoolTotalCost, schoolTotalKg) {
+  const tbody = document.getElementById('orderTableBody');
+  const tfoot = document.getElementById('orderTableFoot');
+  tbody.innerHTML = '';
+
+  const list = Object.values(orderMap);
+  list.forEach(entry => {
+    const f = entry.food;
+    const totalKg = (entry.grossTotal * totalMeals) / 1000;
+    const totalYen = Math.round(entry.costTotal * totalMeals);
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${f.cat}</td>
+      <td>${f.name}</td>
+      <td class="num">${entry.netTotal.toFixed(1)} g</td>
+      <td class="num">${f.waste}%</td>
+      <td class="num">${entry.grossTotal.toFixed(1)} g</td>
+      <td class="num"><strong>${totalKg.toFixed(2)} kg</strong></td>
+      <td class="num">${f.price} 円</td>
+      <td class="num">${totalYen.toLocaleString()} 円</td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  tfoot.innerHTML = `
+    <tr style="background:var(--primary-light); font-weight:700;">
+      <td colspan="5">全校合計（${totalMeals}食分）</td>
+      <td class="num">${schoolTotalKg.toFixed(2)} kg</td>
+      <td></td>
+      <td class="num">${schoolTotalCost.toLocaleString()} 円</td>
+    </tr>
+  `;
+}
+
+// 食材マスタ描画・編集
+function renderMasterTable() {
+  const tbody = document.getElementById('masterTableBody');
+  tbody.innerHTML = '';
+  foods.forEach(f => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${f.cat}</td>
+      <td>${f.name}</td>
+      <td class="num">${f.energy}</td>
+      <td class="num">${f.protein}</td>
+      <td class="num">${f.fat}</td>
+      <td class="num">${f.carb}</td>
+      <td class="num">${f.salt}</td>
+      <td class="num">${f.ca}</td>
+      <td class="num">${f.fe}</td>
+      <td class="num">${f.fiber}</td>
+      <td class="num">
+        <input type="number" value="${f.waste}" min="0" max="90" style="width:58px; padding:2px 4px;"
+          onchange="updateMasterField('${f.id}', 'waste', this.value)">
+      </td>
+      <td class="num">
+        <input type="number" value="${f.price}" min="0" step="1" style="width:68px; padding:2px 4px;"
+          onchange="updateMasterField('${f.id}', 'price', this.value)">
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function updateMasterField(id, field, val) {
+  const num = parseFloat(val);
+  if (isNaN(num) || num < 0) return;
+  const f = getFoodById(id);
+  if (f) {
+    f[field] = num;
+    populateFoodSelect();
+    recalculate();
+  }
+}
+
+function registerNewFood() {
+  const name = document.getElementById('newName').value.trim();
+  if (!name) {
+    alert('食材名を入力してください。');
+    return;
+  }
+  const newItem = {
+    id: 'custom_' + Date.now(),
+    cat: document.getElementById('newCat').value,
+    name: name,
+    energy: parseFloat(document.getElementById('newEnergy').value) || 0,
+    protein: parseFloat(document.getElementById('newProtein').value) || 0,
+    fat: parseFloat(document.getElementById('newFat').value) || 0,
+    carb: parseFloat(document.getElementById('newCarb').value) || 0,
+    salt: parseFloat(document.getElementById('newSalt').value) || 0,
+    ca: parseFloat(document.getElementById('newCa').value) || 0,
+    fe: parseFloat(document.getElementById('newFe').value) || 0,
+    fiber: parseFloat(document.getElementById('newFiber').value) || 0,
+    waste: parseFloat(document.getElementById('newWaste').value) || 0,
+    price: parseFloat(document.getElementById('newPrice').value) || 0
+  };
+  foods.unshift(newItem);
+  document.getElementById('newName').value = '';
+  populateFoodSelect();
+  renderMasterTable();
+  saveState();
+  alert(`「${name}」を食材マスタに登録しました。`);
+}
+
+function resetMasterData() {
+  if (confirm('食材マスタを初期状態に戻しますか？（独自追加した食材は削除されます）')) {
+    foods = JSON.parse(JSON.stringify(DEFAULT_FOODS));
+    populateFoodSelect();
+    renderMasterTable();
+    recalculate();
+  }
+}
+
+// Excel用CSV出力（BOM付きUTF-8）
+function exportCSV() {
+  const title = document.getElementById('menuTitle').value;
+  const date = document.getElementById('menuDate').value;
+  const totalMeals = Number(document.getElementById('totalMeals').value) || 450;
+
+  let lines = [];
+  lines.push(`"実施日","${date}","献立名","${title}","予定食数","${totalMeals}食"`);
+  lines.push('');
+  lines.push('"料理区分","分類","食材名","1人純使用量(g)","廃棄率(%)","1人発注量(g)","エネルギー(kcal)","たんぱく質(g)","脂質(g)","炭水化物(g)","食塩相当量(g)","カルシウム(mg)","鉄(mg)","食物繊維(g)","1人原価(円)","全校発注量(kg)","全校材料費(円)"');
+
+  menuItems.forEach(item => {
+    const f = getFoodById(item.foodId);
+    if (!f) return;
+    const r = item.netWeight / 100;
+    const gross = f.waste >= 100 ? item.netWeight : item.netWeight / (1 - f.waste / 100);
+    const cost = (gross * f.price) / 100;
+    const totalKg = (gross * totalMeals) / 1000;
+    const totalCost = Math.round(cost * totalMeals);
+
+    lines.push([
+      `"${item.dishType}"`,
+      `"${f.cat}"`,
+      `"${f.name}"`,
+      item.netWeight.toFixed(1),
+      f.waste,
+      gross.toFixed(1),
+      (f.energy * r).toFixed(1),
+      (f.protein * r).toFixed(2),
+      (f.fat * r).toFixed(2),
+      (f.carb * r).toFixed(2),
+      (f.salt * r).toFixed(2),
+      (f.ca * r).toFixed(1),
+      (f.fe * r).toFixed(2),
+      (f.fiber * r).toFixed(2),
+      cost.toFixed(2),
+      totalKg.toFixed(2),
+      totalCost
+    ].join(','));
+  });
+
+  const csvContent = '\uFEFF' + lines.join('\r\n');
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `給食献立計算_${date || 'export'}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+window.onload = init;
+</script>
+</body>
+</html>
